@@ -37,6 +37,16 @@ If another extension outputs a normal executable `<script>` tag directly, Consen
 
 ## PHP integration API
 
+PHP-side registration is the **preferred integration path** for normal extensions that already load their own JavaScript with `INCLUDEJS`.
+
+It is useful when:
+
+- an extension already knows its integrations on the server side
+- you want services visible in the consent modal before any client JS runs
+- you want ACP-managed integrations with no custom extension JS changes
+
+In practice, this keeps the JavaScript changes small: the extension registers its analytics/marketing service in PHP, then only adds a small consent check around the point where tracking starts.
+
 Listen to `phpbb.consentmanager.collect_registrations` and register your integration through `phpbb.consentmanager.service`:
 
 ```php
@@ -102,6 +112,62 @@ window.consentManager.ready(function (consentManager) {
 	}
 });
 ```
+
+## Traditional phpBB extension pattern
+
+Extensions do not need to become Consent Manager-only extensions. A normal phpBB extension can still include its JavaScript through a template event:
+
+```html
+{% INCLUDEJS '@vendor_extension/js/feature.js' %}
+```
+
+Then keep the script lightweight and gate the actual tracking behavior inside that file:
+
+```js
+(function (window) {
+	function startTracking() {
+		// Existing analytics / cookie logic
+	}
+
+	if (window.consentManager) {
+		window.consentManager.ready(function (consentManager) {
+			if (consentManager && typeof consentManager.hasConsent === 'function') {
+				if (consentManager.hasConsent('analytics')) {
+					startTracking();
+				}
+
+				consentManager.onChange(function (state) {
+					if (state && state.categories.indexOf('analytics') !== -1) {
+						startTracking();
+					}
+				});
+
+				return;
+			}
+
+			startTracking();
+		});
+		return;
+	}
+
+	startTracking();
+})(window);
+```
+
+This keeps the extension fully functional when Consent Manager is absent, while still deferring analytics or marketing behavior when Consent Manager is installed. For many extensions, the JavaScript change is limited to wrapping the old tracking startup line with the consent check above, while the service metadata lives in PHP.
+
+## Direct script tags in templates
+
+If an extension directly emits `<script>` tags instead of loading a normal JS file with `INCLUDEJS`, those tags must be made non-executable until consent exists. Use consent placeholders like:
+
+```html
+<script type="text/plain" data-consent-category="analytics" src="https://cdn.example.com/analytics.js"></script>
+<script type="text/plain" data-consent-category="analytics">
+	window.exampleTracker && window.exampleTracker.page();
+</script>
+```
+
+This is the right path for extensions like analytics tags that currently hard-code live external and inline script tags in template event files.
 
 ## Consent withdrawal and re-prompting
 
