@@ -16,7 +16,10 @@
 	var keydownBound = false;
 	var lastFocusedElement = null;
 	var categoriesById = {};
+	var requiredCategories = [];
+	var enabledCategories = [];
 	var optionalCategories = [];
+	var hasStructuredPolicy = false;
 	var i;
 
 	if (!payload || !payload.categories)
@@ -24,22 +27,58 @@
 		return;
 	}
 
-	for (i = 0; i < payload.categories.length; i++)
-	{
-		categoriesById[payload.categories[i].id] = payload.categories[i];
-
-		if (payload.categories[i].enabled && !payload.categories[i].required)
-		{
-			optionalCategories.push(payload.categories[i].id);
-		}
-	}
-
-	state = loadAndSyncState();
-
 	function isArray(value)
 	{
 		return Object.prototype.toString.call(value) === '[object Array]';
 	}
+
+	for (i = 0; i < payload.categories.length; i++)
+	{
+		categoriesById[payload.categories[i].id] = payload.categories[i];
+	}
+
+	if (isArray(payload.requiredCategories))
+	{
+		requiredCategories = unique(payload.requiredCategories);
+	}
+
+	if (isArray(payload.enabledCategories))
+	{
+		enabledCategories = unique(payload.enabledCategories);
+	}
+
+	if (isArray(payload.optionalCategories))
+	{
+		optionalCategories = unique(payload.optionalCategories);
+	}
+
+	hasStructuredPolicy = isArray(payload.requiredCategories) && isArray(payload.enabledCategories) && isArray(payload.optionalCategories);
+	if (!hasStructuredPolicy)
+	{
+		for (i = 0; i < payload.categories.length; i++)
+		{
+			if (payload.categories[i].enabled)
+			{
+				enabledCategories.push(payload.categories[i].id);
+			}
+
+			if (payload.categories[i].required)
+			{
+				requiredCategories.push(payload.categories[i].id);
+			}
+
+			if (payload.categories[i].enabled && !payload.categories[i].required)
+			{
+				optionalCategories.push(payload.categories[i].id);
+			}
+		}
+
+		requiredCategories = unique(requiredCategories);
+		enabledCategories = unique(enabledCategories);
+		optionalCategories = unique(optionalCategories);
+	}
+
+	state = loadAndSyncState();
 
 	function safeParse(raw)
 	{
@@ -122,19 +161,19 @@
 
 	function normalizeCategories(categories)
 	{
-		var normalized = ['necessary'];
+		var normalized = requiredCategories.slice(0);
 		var index;
 		var categoryId;
 
 		if (!isArray(categories))
 		{
-			return normalized;
+			return unique(normalized);
 		}
 
 		for (index = 0; index < categories.length; index++)
 		{
 			categoryId = String(categories[index]);
-			if (categoryId !== 'necessary' && categoriesById[categoryId] && categoriesById[categoryId].enabled && !categoriesById[categoryId].required)
+			if (requiredCategories.indexOf(categoryId) === -1 && enabledCategories.indexOf(categoryId) !== -1 && categoriesById[categoryId])
 			{
 				normalized.push(categoryId);
 			}
@@ -251,12 +290,12 @@
 
 	function hasConsent(category)
 	{
-		if (category === 'necessary')
+		if (requiredCategories.indexOf(category) !== -1)
 		{
 			return true;
 		}
 
-		return !!(state && state.categories.indexOf(category) !== -1);
+		return !!(state && enabledCategories.indexOf(category) !== -1 && state.categories.indexOf(category) !== -1);
 	}
 
 	function getStateSnapshot()
@@ -307,7 +346,7 @@
 
 		for (index = 0; index < previousState.categories.length; index++)
 		{
-			if (previousState.categories[index] !== 'necessary' && nextState.categories.indexOf(previousState.categories[index]) === -1)
+			if (requiredCategories.indexOf(previousState.categories[index]) === -1 && nextState.categories.indexOf(previousState.categories[index]) === -1)
 			{
 				removedCategories.push(previousState.categories[index]);
 			}
@@ -987,12 +1026,12 @@
 
 			if (action === 'accept-all')
 			{
-				setState(optionalCategories.concat(['necessary']));
+				setState(optionalCategories.concat(requiredCategories));
 				closeSettings();
 			}
 			else if (action === 'reject-all')
 			{
-				setState(['necessary']);
+				setState(requiredCategories);
 				closeSettings();
 			}
 			else if (action === 'open-settings')
@@ -1005,7 +1044,7 @@
 			}
 			else if (action === 'save-settings')
 			{
-				setState(selectedOptionalCategories().concat(['necessary']));
+				setState(selectedOptionalCategories().concat(requiredCategories));
 				closeSettings();
 			}
 		});

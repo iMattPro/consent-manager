@@ -15,12 +15,12 @@ if (!defined('IN_PHPBB'))
 
 if (empty($lang) || !is_array($lang))
 {
-	$lang = array();
+	$lang = [];
 }
 
-$lang = array_merge($lang, array(
+$lang = array_merge($lang, [
 	'ACP_CONSENTMANAGER'			=> 'Consent Manager',
 	'ACP_CONSENTMANAGER_SETTINGS'	=> 'Settings',
 	'LOG_CONSENTMANAGER_UPDATED'	=> '<strong>Updated Consent Manager settings</strong>',
 	'LOG_CONSENTMANAGER_REPROMPT'	=> '<strong>Forced Consent Manager re-prompt by increasing the consent version</strong>',
-));
+]);

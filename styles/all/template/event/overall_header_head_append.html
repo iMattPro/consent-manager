@@ -3,14 +3,26 @@
 	<script>
 	(function (window, document) {
 		var payload = {{ CONSENTMANAGER_PAYLOAD|raw }};
-		var categoryMap = {};
+		var requiredCategories = payload.requiredCategories || [];
+		var enabledCategories = payload.enabledCategories || [];
 		var index;
 
 		window.phpbbConsentManagerPayload = payload;
 
-		for (index = 0; index < payload.categories.length; index++)
+		if ((!requiredCategories.length || !enabledCategories.length) && payload.categories)
 		{
-			categoryMap[payload.categories[index].id] = payload.categories[index];
+			for (index = 0; index < payload.categories.length; index++)
+			{
+				if (payload.categories[index].enabled)
+				{
+					enabledCategories.push(payload.categories[index].id);
+				}
+
+				if (payload.categories[index].required)
+				{
+					requiredCategories.push(payload.categories[index].id);
+				}
+			}
 		}
 
 		function parseCookie(name)
@@ -73,6 +85,11 @@
 			return state;
 		}
 
+		function hasValue(items, value)
+		{
+			return items.indexOf(value) !== -1;
+		}
+
 		var stub = window.consentManager || {};
 		stub._queue = stub._queue || [];
 		stub.registerScript = stub.registerScript || function (id, options) {
@@ -89,7 +106,7 @@
 		};
 		stub.hasConsent = stub.hasConsent || function (category) {
 			var state = loadState();
-			return category === 'necessary' || !!(state && categoryMap[category] && categoryMap[category].enabled && state.categories.indexOf(category) !== -1);
+			return hasValue(requiredCategories, category) || !!(state && hasValue(enabledCategories, category) && state.categories.indexOf(category) !== -1);
 		};
 		window.consentManager = stub;
 	})(window, document);

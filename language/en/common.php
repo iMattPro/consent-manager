@@ -15,10 +15,10 @@ if (!defined('IN_PHPBB'))
 
 if (empty($lang) || !is_array($lang))
 {
-	$lang = array();
+	$lang = [];
 }
 
-$lang = array_merge($lang, array(
+$lang = array_merge($lang, [
 	'CONSENTMANAGER_ACCEPT_ALL'					=> 'Accept all',
 	'CONSENTMANAGER_REJECT_ALL'					=> 'Reject all',
 	'CONSENTMANAGER_CUSTOMIZE'					=> 'Customize settings',
@@ -35,4 +35,4 @@ $lang = array_merge($lang, array(
 	'CONSENTMANAGER_CATEGORY_ANALYTICS_EXPLAIN'	=> 'Helps forum operators understand traffic and improve performance.',
 	'CONSENTMANAGER_CATEGORY_MARKETING'			=> 'Marketing',
 	'CONSENTMANAGER_CATEGORY_MARKETING_EXPLAIN'	=> 'Used for advertising, personalization, and marketing attribution.',
-));
+]);

@@ -10,7 +10,7 @@
 
 namespace phpbb\consentmanager\controller;
 
-use phpbb\consentmanager\service\consent_manager;
+use phpbb\consentmanager\service\consent_manager_interface;
 use phpbb\consentmanager\service\log_manager;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,10 +21,10 @@ class log_controller
 	/** @var log_manager */
 	protected $log_manager;
 
-	/** @var consent_manager */
+	/** @var consent_manager_interface */
 	protected $consent_manager;
 
-	public function __construct(log_manager $log_manager, consent_manager $consent_manager)
+	public function __construct(log_manager $log_manager, consent_manager_interface $consent_manager)
 	{
 		$this->log_manager = $log_manager;
 		$this->consent_manager = $consent_manager;
@@ -36,39 +36,42 @@ class log_controller
 
 		if (!is_array($payload))
 		{
-			return new JsonResponse(array(
+			return new JsonResponse([
 				'success' => false,
 				'error' => 'invalid_payload',
-			), Response::HTTP_BAD_REQUEST);
+			], Response::HTTP_BAD_REQUEST);
 		}
 
-		$hash = isset($payload['hash']) ? (string) $payload['hash'] : '';
-		if (!check_link_hash($hash, 'phpbb.consentmanager.log'))
+		$submission = $this->consent_manager->validate_log_payload($payload);
+		if (empty($submission['success']))
 		{
-			return new JsonResponse(array(
+			return new JsonResponse([
 				'success' => false,
-				'error' => 'invalid_hash',
-			), Response::HTTP_FORBIDDEN);
+				'error' => $submission['error'],
+			], $this->get_error_status_code($submission['error']));
 		}
 
-		$version = isset($payload['version']) ? (int) $payload['version'] : 0;
-		$categories = isset($payload['categories']) && is_array($payload['categories']) ? $payload['categories'] : array();
-		$categories = $this->consent_manager->normalize_categories($categories);
+		$this->log_manager->log_consent($submission['categories'], $submission['version']);
 
-		if ($version !== $this->consent_manager->get_version())
-		{
-			return new JsonResponse(array(
-				'success' => false,
-				'error' => 'version_mismatch',
-			), Response::HTTP_CONFLICT);
-		}
-
-		$this->log_manager->log_consent($categories, $version);
-
-		return new JsonResponse(array(
+		return new JsonResponse([
 			'success' => true,
-			'categories' => $categories,
-			'version' => $version,
-		));
+			'categories' => $submission['categories'],
+			'version' => $submission['version'],
+		]);
+	}
+
+	protected function get_error_status_code($error)
+	{
+		switch ($error)
+		{
+			case 'invalid_hash':
+				return Response::HTTP_FORBIDDEN;
+
+			case 'version_mismatch':
+				return Response::HTTP_CONFLICT;
+
+			default:
+				return Response::HTTP_BAD_REQUEST;
+		}
 	}
 }

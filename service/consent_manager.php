@@ -12,12 +12,13 @@ namespace phpbb\consentmanager\service;
 
 use phpbb\config\config;
 use phpbb\config\db_text;
+use phpbb\event\dispatcher_interface;
 use phpbb\language\language;
 
 class consent_manager implements consent_manager_interface
 {
-	const STORAGE_KEY = 'phpbb_consent_manager';
-	const COOKIE_NAME = 'phpbb_consent_manager';
+	public const STORAGE_KEY = 'phpbb_consent_manager';
+	public const COOKIE_NAME = 'phpbb_consent_manager';
 
 	/** @var config */
 	protected $config;
@@ -28,14 +29,18 @@ class consent_manager implements consent_manager_interface
 	/** @var language */
 	protected $language;
 
-	/** @var array */
-	protected $registrations = array();
+	/** @var dispatcher_interface */
+	protected $dispatcher;
 
-	public function __construct(config $config, db_text $config_text, language $language)
+	/** @var array */
+	protected $registrations = [];
+
+	public function __construct(config $config, db_text $config_text, language $language, dispatcher_interface $dispatcher)
 	{
 		$this->config = $config;
 		$this->config_text = $config_text;
 		$this->language = $language;
+		$this->dispatcher = $dispatcher;
 	}
 
 	/**
@@ -65,13 +70,13 @@ class consent_manager implements consent_manager_interface
 			return false;
 		}
 
-		$registration = array(
+		$registration = [
 			'id' => $id,
 			'label' => isset($definition['label']) && trim((string) $definition['label']) !== '' ? trim((string) $definition['label']) : $id,
 			'category' => $category,
 			'description' => isset($definition['description']) ? trim((string) $definition['description']) : '',
-			'scripts' => array(),
-		);
+			'scripts' => [],
+		];
 
 		if (isset($definition['scripts']) && is_array($definition['scripts']))
 		{
@@ -91,7 +96,7 @@ class consent_manager implements consent_manager_interface
 		}
 		else
 		{
-			$script = $this->normalize_script($id, $category, $definition, 0, false);
+			$script = $this->normalize_script($id, $category, $definition);
 			if (!empty($script))
 			{
 				$registration['scripts'][] = $script;
@@ -102,11 +107,92 @@ class consent_manager implements consent_manager_interface
 		return true;
 	}
 
+	public function get_frontend_template_data($log_url, $log_hash)
+	{
+		$payload = $this->build_frontend_payload($log_url, $log_hash);
+		$categories = $this->get_categories();
+
+		return [
+			'S_CONSENTMANAGER_ENABLED'				=> true,
+			'S_CONSENTMANAGER_ANALYTICS_ENABLED'	=> !empty($categories['analytics']['enabled']),
+			'S_CONSENTMANAGER_MARKETING_ENABLED'	=> !empty($categories['marketing']['enabled']),
+			'CONSENTMANAGER_PAYLOAD'				=> json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT),
+		];
+	}
+
+	public function get_acp_template_data()
+	{
+		$integrations = (string) $this->config_text->get('consentmanager_integrations');
+
+		return [
+			'S_CONSENTMANAGER_ANALYTICS'	=> (bool) $this->config['consentmanager_analytics_enabled'],
+			'S_CONSENTMANAGER_MARKETING'	=> (bool) $this->config['consentmanager_marketing_enabled'],
+			'CONSENTMANAGER_INTEGRATIONS'	=> $integrations !== '' ? $integrations : '[]',
+			'CONSENTMANAGER_VERSION'		=> $this->get_version(),
+		];
+	}
+
+	public function save_acp_settings(array $settings, array &$errors = [])
+	{
+		$errors = [];
+		$stored_integrations = $this->normalize_integrations_json(
+			$settings['integrations'] ?? '',
+			$errors
+		);
+
+		if (!empty($errors))
+		{
+			return false;
+		}
+
+		$this->config->set('consentmanager_analytics_enabled', !empty($settings['analytics_enabled']) ? 1 : 0);
+		$this->config->set('consentmanager_marketing_enabled', !empty($settings['marketing_enabled']) ? 1 : 0);
+		$this->config_text->set('consentmanager_integrations', $stored_integrations);
+
+		return true;
+	}
+
+	public function reset_consent_version()
+	{
+		$this->config->set('consentmanager_consent_version', $this->get_version() + 1);
+	}
+
+	public function validate_log_payload(array $payload)
+	{
+		$hash = isset($payload['hash']) ? (string) $payload['hash'] : '';
+		if (!check_link_hash($hash, 'phpbb.consentmanager.log'))
+		{
+			return [
+				'success' => false,
+				'error' => 'invalid_hash',
+			];
+		}
+
+		$version = isset($payload['version']) ? (int) $payload['version'] : 0;
+		if ($version !== $this->get_version())
+		{
+			return [
+				'success' => false,
+				'error' => 'version_mismatch',
+			];
+		}
+
+		return [
+			'success' => true,
+			'categories' => $this->normalize_categories(
+				isset($payload['categories']) && is_array($payload['categories']) ? $payload['categories'] : []
+			),
+			'version' => $version,
+		];
+	}
+
 	public function build_frontend_payload($log_url, $log_hash)
 	{
+		$this->collect_registrations();
+
 		$categories = $this->get_categories();
 		$services = $this->get_services();
-		$scripts = array();
+		$scripts = [];
 
 		foreach ($services as $service)
 		{
@@ -119,20 +205,23 @@ class consent_manager implements consent_manager_interface
 			}
 		}
 
-		return array(
+		return [
 			'storageKey' => $this->get_storage_key(),
 			'cookieName' => $this->get_cookie_name(),
 			'version' => $this->get_version(),
 			'rootId' => 'consent-manager-root',
 			'deferredSelector' => 'script[type="text/plain"][data-consent-category]',
+			'requiredCategories' => $this->get_required_category_ids($categories),
+			'enabledCategories' => $this->get_enabled_category_ids($categories),
+			'optionalCategories' => $this->get_optional_category_ids($categories),
 			'categories' => array_values($categories),
 			'services' => array_values($services),
 			'scripts' => array_values($scripts),
-			'banner' => array(
+			'banner' => [
 				'title' => $this->language->lang('CONSENTMANAGER_DEFAULT_BANNER_TITLE'),
 				'text' => $this->language->lang('CONSENTMANAGER_DEFAULT_BANNER_TEXT'),
-			),
-			'strings' => array(
+			],
+			'strings' => [
 				'acceptAll' => $this->language->lang('CONSENTMANAGER_ACCEPT_ALL'),
 				'rejectAll' => $this->language->lang('CONSENTMANAGER_REJECT_ALL'),
 				'customize' => $this->language->lang('CONSENTMANAGER_CUSTOMIZE'),
@@ -141,37 +230,37 @@ class consent_manager implements consent_manager_interface
 				'alwaysActive' => $this->language->lang('CONSENTMANAGER_ALWAYS_ACTIVE'),
 				'allowed' => $this->language->lang('CONSENTMANAGER_ALLOWED'),
 				'settingsTitle' => $this->language->lang('CONSENTMANAGER_SETTINGS_TITLE'),
-			),
+			],
 			'logEndpoint' => $log_url,
 			'logHash' => $log_hash,
-		);
+		];
 	}
 
 	public function get_categories()
 	{
-		return array(
-			'necessary' => array(
+		return [
+			'necessary' => [
 				'id' => 'necessary',
 				'label' => $this->language->lang('CONSENTMANAGER_CATEGORY_NECESSARY'),
 				'description' => $this->language->lang('CONSENTMANAGER_CATEGORY_NECESSARY_EXPLAIN'),
 				'required' => true,
 				'enabled' => true,
-			),
-			'analytics' => array(
+			],
+			'analytics' => [
 				'id' => 'analytics',
 				'label' => $this->language->lang('CONSENTMANAGER_CATEGORY_ANALYTICS'),
 				'description' => $this->language->lang('CONSENTMANAGER_CATEGORY_ANALYTICS_EXPLAIN'),
 				'required' => false,
 				'enabled' => (bool) $this->config['consentmanager_analytics_enabled'],
-			),
-			'marketing' => array(
+			],
+			'marketing' => [
 				'id' => 'marketing',
 				'label' => $this->language->lang('CONSENTMANAGER_CATEGORY_MARKETING'),
 				'description' => $this->language->lang('CONSENTMANAGER_CATEGORY_MARKETING_EXPLAIN'),
 				'required' => false,
 				'enabled' => (bool) $this->config['consentmanager_marketing_enabled'],
-			),
-		);
+			],
+		];
 	}
 
 	public function get_services()
@@ -199,40 +288,40 @@ class consent_manager implements consent_manager_interface
 		$raw = $this->config_text->get('consentmanager_integrations');
 		if ($raw === '')
 		{
-			return array();
+			return [];
 		}
 
-		$errors = array();
+		$errors = [];
 		$integrations = $this->normalize_integrations($raw, $errors);
 
-		return empty($errors) ? $integrations : array();
+		return empty($errors) ? $integrations : [];
 	}
 
 	/**
 	 * Normalize integrations configured through the ACP JSON textarea.
 	 *
-	 * Inline JavaScript is intentionally not supported here so ACP-managed
+	 * Inline JavaScript is intentionally not supported here, so ACP-managed
 	 * integrations cannot introduce arbitrary executable code.
 	 *
 	 * @param string|array $input Raw JSON or pre-decoded integrations
 	 * @param array        $errors Validation errors
 	 * @return array
 	 */
-	public function normalize_integrations($input, array &$errors = array())
+	public function normalize_integrations($input, array &$errors = [])
 	{
 		if (is_string($input))
 		{
 			$trimmed = trim($input);
 			if ($trimmed === '')
 			{
-				return array();
+				return [];
 			}
 
 			$decoded = json_decode($trimmed, true);
 			if (json_last_error() !== JSON_ERROR_NONE)
 			{
 				$errors[] = $this->language->lang('ACP_CONSENTMANAGER_INVALID_INTEGRATIONS');
-				return array();
+				return [];
 			}
 		}
 		else
@@ -242,16 +331,16 @@ class consent_manager implements consent_manager_interface
 
 		if (empty($decoded))
 		{
-			return array();
+			return [];
 		}
 
 		if (!is_array($decoded))
 		{
 			$errors[] = $this->language->lang('ACP_CONSENTMANAGER_INVALID_INTEGRATIONS');
-			return array();
+			return [];
 		}
 
-		$integrations = array();
+		$integrations = [];
 
 		foreach ($decoded as $index => $item)
 		{
@@ -273,23 +362,23 @@ class consent_manager implements consent_manager_interface
 				continue;
 			}
 
-			$integrations[$id] = array(
+			$integrations[$id] = [
 				'id' => $id,
 				'label' => $label !== '' ? $label : $id,
 				'category' => $category,
 				'description' => $description,
-				'scripts' => array(
-					array(
+				'scripts' => [
+					[
 						'id' => $id,
 						'category' => $category,
 						'src' => $src,
 						'inline' => '',
 						'async' => !empty($item['async']),
 						'defer' => !empty($item['defer']),
-						'attributes' => array(),
-					),
-				),
-			);
+						'attributes' => [],
+					],
+				],
+			];
 		}
 
 		return array_values($integrations);
@@ -297,7 +386,7 @@ class consent_manager implements consent_manager_interface
 
 	public function normalize_categories(array $categories)
 	{
-		$normalized = array('necessary');
+		$normalized = ['necessary'];
 
 		foreach ($categories as $category)
 		{
@@ -334,7 +423,77 @@ class consent_manager implements consent_manager_interface
 
 	public function is_supported_category($category)
 	{
-		return in_array($category, array('necessary', 'analytics', 'marketing'), true);
+		return in_array($category, ['necessary', 'analytics', 'marketing'], true);
+	}
+
+	protected function collect_registrations()
+	{
+		$consent_manager = $this;
+		$vars = ['consent_manager'];
+		extract($this->dispatcher->trigger_event('phpbb.consentmanager.collect_registrations', compact($vars)));
+	}
+
+	protected function normalize_integrations_json($input, array &$errors = [])
+	{
+		$integrations = $this->normalize_integrations($input, $errors);
+		if (!empty($errors))
+		{
+			return '[]';
+		}
+
+		$json = json_encode($integrations, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+		if ($json === false)
+		{
+			$errors[] = $this->language->lang('ACP_CONSENTMANAGER_INVALID_INTEGRATIONS');
+			return '[]';
+		}
+
+		return $json;
+	}
+
+	protected function get_required_category_ids(array $categories)
+	{
+		$required_categories = [];
+
+		foreach ($categories as $category)
+		{
+			if (!empty($category['required']))
+			{
+				$required_categories[] = $category['id'];
+			}
+		}
+
+		return array_values($required_categories);
+	}
+
+	protected function get_enabled_category_ids(array $categories)
+	{
+		$enabled_categories = [];
+
+		foreach ($categories as $category)
+		{
+			if (!empty($category['enabled']))
+			{
+				$enabled_categories[] = $category['id'];
+			}
+		}
+
+		return array_values($enabled_categories);
+	}
+
+	protected function get_optional_category_ids(array $categories)
+	{
+		$optional_categories = [];
+
+		foreach ($categories as $category)
+		{
+			if (!empty($category['enabled']) && empty($category['required']))
+			{
+				$optional_categories[] = $category['id'];
+			}
+		}
+
+		return array_values($optional_categories);
 	}
 
 	protected function normalize_script($registration_id, $fallback_category, array $definition, $script_index = 0, $force_unique_id = false)
@@ -342,18 +501,18 @@ class consent_manager implements consent_manager_interface
 		$category = isset($definition['category']) && trim((string) $definition['category']) !== '' ? trim((string) $definition['category']) : $fallback_category;
 		if (!$this->is_supported_category($category))
 		{
-			return array();
+			return [];
 		}
 
 		$script_id = isset($definition['id']) && trim((string) $definition['id']) !== '' ? trim((string) $definition['id']) : $registration_id;
-		if ($force_unique_id || $script_id === $registration_id && $script_index > 0)
+		if ($force_unique_id || ($script_id === $registration_id && $script_index > 0))
 		{
 			$script_id = $registration_id . '.' . ($script_index + 1);
 		}
 
 		if (!$this->is_valid_identifier($script_id))
 		{
-			return array();
+			return [];
 		}
 
 		$src = isset($definition['src']) ? trim((string) $definition['src']) : '';
@@ -361,45 +520,45 @@ class consent_manager implements consent_manager_interface
 
 		if ($src === '' && $inline === '')
 		{
-			return array();
+			return [];
 		}
 
 		if ($src !== '' && $inline !== '')
 		{
-			return array();
+			return [];
 		}
 
 		if ($src !== '' && !$this->is_valid_script_source($src))
 		{
-			return array();
+			return [];
 		}
 
-		return array(
+		return [
 			'id' => $script_id,
 			'category' => $category,
 			'src' => $src,
 			'inline' => $inline,
 			'async' => isset($definition['async']) ? (bool) $definition['async'] : ($src !== ''),
 			'defer' => isset($definition['defer']) ? (bool) $definition['defer'] : false,
-			'attributes' => $this->normalize_attributes(isset($definition['attributes']) ? $definition['attributes'] : array()),
-		);
+			'attributes' => $this->normalize_attributes($definition['attributes'] ?? []),
+		];
 	}
 
 	protected function normalize_attributes($attributes)
 	{
 		if (!is_array($attributes))
 		{
-			return array();
+			return [];
 		}
 
-		$normalized = array();
+		$normalized = [];
 		foreach ($attributes as $name => $value)
 		{
 			$name = trim((string) $name);
 			if ($name === ''
-				|| !preg_match('/^[a-zA-Z_:][a-zA-Z0-9_:\\.-]*$/', $name)
-				|| preg_match('/^on/i', $name)
-				|| in_array(strtolower($name), array('src', 'type', 'async', 'defer'), true))
+				|| !preg_match('/^[a-zA-Z_:][a-zA-Z0-9_:.-]*$/', $name)
+				|| 0 === stripos($name, "on")
+				|| in_array(strtolower($name), ['src', 'type', 'async', 'defer'], true))
 			{
 				continue;
 			}
@@ -431,12 +590,11 @@ class consent_manager implements consent_manager_interface
 			return false;
 		}
 
-		return !isset($parts['scheme']) || in_array(strtolower($parts['scheme']), array('http', 'https'), true);
+		return !isset($parts['scheme']) || in_array(strtolower($parts['scheme']), ['http', 'https'], true);
 	}
 
 	protected function is_valid_identifier($identifier)
 	{
 		return $identifier !== '' && preg_match('/^[A-Za-z0-9][A-Za-z0-9._:-]*$/', $identifier);
 	}
-
 }

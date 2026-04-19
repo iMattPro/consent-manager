@@ -10,39 +10,29 @@
 
 namespace phpbb\consentmanager\event;
 
-use phpbb\consentmanager\service\consent_manager;
+use phpbb\consentmanager\service\consent_manager_interface;
 use phpbb\controller\helper;
 use phpbb\language\language;
 use phpbb\template\template;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class listener implements EventSubscriberInterface
 {
 	/** @var helper */
 	protected $helper;
 
-	/** @var EventDispatcherInterface */
-	protected $dispatcher;
-
 	/** @var language */
 	protected $language;
 
-	/** @var consent_manager */
+	/** @var consent_manager_interface */
 	protected $consent_manager;
 
 	/** @var template */
 	protected $template;
 
-	public function __construct(
-		helper $helper,
-		EventDispatcherInterface $dispatcher,
-		language $language,
-		consent_manager $consent_manager,
-		template $template
-	) {
+	public function __construct(helper $helper, language $language, consent_manager_interface $consent_manager, template $template)
+	{
 		$this->helper = $helper;
-		$this->dispatcher = $dispatcher;
 		$this->language = $language;
 		$this->consent_manager = $consent_manager;
 		$this->template = $template;
@@ -50,9 +40,9 @@ class listener implements EventSubscriberInterface
 
 	public static function getSubscribedEvents()
 	{
-		return array(
+		return [
 			'core.page_header_after' => 'inject_frontend',
-		);
+		];
 	}
 
 	public function inject_frontend()
@@ -63,22 +53,9 @@ class listener implements EventSubscriberInterface
 		}
 
 		$this->language->add_lang('common', 'phpbb/consentmanager');
-
-		$consent_manager = $this->consent_manager;
-		$vars = array('consent_manager');
-		extract($this->dispatcher->trigger_event('phpbb.consentmanager.collect_registrations', compact($vars)));
-
-		$payload = $this->consent_manager->build_frontend_payload(
+		$this->template->assign_vars($this->consent_manager->get_frontend_template_data(
 			$this->helper->route('phpbb_consentmanager_log_controller'),
 			generate_link_hash('phpbb.consentmanager.log')
-		);
-		$categories = $this->consent_manager->get_categories();
-
-		$this->template->assign_vars(array(
-			'S_CONSENTMANAGER_ENABLED'				=> true,
-			'S_CONSENTMANAGER_ANALYTICS_ENABLED'	=> !empty($categories['analytics']['enabled']),
-			'S_CONSENTMANAGER_MARKETING_ENABLED'	=> !empty($categories['marketing']['enabled']),
-			'CONSENTMANAGER_PAYLOAD'				=> json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT),
 		));
 	}
 }

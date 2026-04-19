@@ -15,10 +15,10 @@ if (!defined('IN_PHPBB'))
 
 if (empty($lang) || !is_array($lang))
 {
-	$lang = array();
+	$lang = [];
 }
 
-$lang = array_merge($lang, array(
+$lang = array_merge($lang, [
 	'ACP_CONSENTMANAGER_EXPLAIN'					=> 'Control category availability, registered integrations, and consent versioning. Non-essential scripts must be registered here or through the PHP API so they can be deferred until consent exists.',
 	'ACP_CONSENTMANAGER_CATEGORIES'					=> 'Consent categories',
 	'ACP_CONSENTMANAGER_CATEGORIES_EXPLAIN'			=> 'Necessary cookies are always active. Optional categories can be disabled globally when not needed.',
@@ -34,4 +34,4 @@ $lang = array_merge($lang, array(
 	'ACP_CONSENTMANAGER_REPROMPT_SUCCESS'			=> 'Consent version increased. Visitors will be asked to review their settings again.',
 	'ACP_CONSENTMANAGER_INVALID_INTEGRATIONS'		=> 'The integrations field must contain a valid JSON array.',
 	'ACP_CONSENTMANAGER_INVALID_INTEGRATION_ENTRY'	=> 'Integration entry %1$s is invalid. Each entry must include a safe id, supported category, and valid script source URL.',
-));
+]);

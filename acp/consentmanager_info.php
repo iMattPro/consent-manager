@@ -14,16 +14,16 @@ class consentmanager_info
 {
 	public function module()
 	{
-		return array(
+		return [
 			'filename'	=> '\phpbb\consentmanager\acp\consentmanager_module',
 			'title'		=> 'ACP_CONSENTMANAGER',
-			'modes'		=> array(
-				'settings'	=> array(
+			'modes'		=> [
+				'settings'	=> [
 					'title' => 'ACP_CONSENTMANAGER_SETTINGS',
 					'auth' => 'ext_phpbb/consentmanager && acl_a_board',
-					'cat' => array('ACP_CONSENTMANAGER'),
-				),
-			),
-		);
+					'cat' => ['ACP_CONSENTMANAGER'],
+				],
+			],
+		];
 	}
 }
