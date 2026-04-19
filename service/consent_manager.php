@@ -137,7 +137,6 @@ class consent_manager implements consent_manager_interface
 				'rejectAll' => $this->language->lang('CONSENTMANAGER_REJECT_ALL'),
 				'customize' => $this->language->lang('CONSENTMANAGER_CUSTOMIZE'),
 				'savePreferences' => $this->language->lang('CONSENTMANAGER_SAVE_PREFERENCES'),
-				'cookieSettings' => $this->language->lang('CONSENTMANAGER_COOKIE_SETTINGS'),
 				'close' => $this->language->lang('CLOSE_WINDOW'),
 				'serviceListHeading' => $this->language->lang('CONSENTMANAGER_SERVICE_LIST_HEADING'),
 				'alwaysActive' => $this->language->lang('CONSENTMANAGER_ALWAYS_ACTIVE'),

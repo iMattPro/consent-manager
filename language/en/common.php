@@ -23,7 +23,6 @@ $lang = array_merge($lang, array(
 	'CONSENTMANAGER_REJECT_ALL'					=> 'Reject all',
 	'CONSENTMANAGER_CUSTOMIZE'					=> 'Customize settings',
 	'CONSENTMANAGER_SAVE_PREFERENCES'			=> 'Save choices',
-	'CONSENTMANAGER_COOKIE_SETTINGS'			=> 'Cookie settings',
 	'CONSENTMANAGER_SETTINGS_TITLE'				=> 'Privacy settings',
 	'CONSENTMANAGER_SERVICE_LIST_HEADING'		=> 'Registered services',
 	'CONSENTMANAGER_ALWAYS_ACTIVE'				=> 'Always active',
