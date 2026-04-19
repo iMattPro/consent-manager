@@ -27,7 +27,7 @@ $lang = array_merge($lang, array(
 	'ACP_CONSENTMANAGER_MARKETING'					=> 'Enable marketing category',
 	'ACP_CONSENTMANAGER_MARKETING_EXPLAIN'			=> 'Allows advertising and marketing integrations to be presented to users and loaded after consent.',
 	'ACP_CONSENTMANAGER_INTEGRATIONS'				=> 'ACP-managed integrations',
-	'ACP_CONSENTMANAGER_INTEGRATIONS_EXPLAIN'		=> 'Provide a JSON array of integrations. Each object must include: id, category, src. Optional fields: label, description, async, defer.',
+	'ACP_CONSENTMANAGER_INTEGRATIONS_EXPLAIN'		=> 'Use this when you want to add a simple third-party analytics or marketing script directly from the ACP instead of through an extension. These entries appear in the consent UI and are only loaded after consent. Provide a JSON array of integrations. Each object must include: <samp class="error">id</samp>, <samp class="error">category</samp>, <samp class="error">src</samp>. The <samp class="error">id</samp> may only use letters, numbers, dots, underscores, colons, and hyphens. <samp class="error">category</samp> must be <samp class="error">necessary</samp>, <samp class="error">analytics</samp>, or <samp class="error">marketing</samp>. <samp class="error">src</samp> must be a valid http, https, or relative script URL. Optional fields: <samp class="error">label</samp>, <samp class="error">description</samp>, <samp class="error">async</samp>, <samp class="error">defer</samp>.',
 	'ACP_CONSENTMANAGER_VERSION'					=> 'Current consent version',
 	'ACP_CONSENTMANAGER_VERSION_EXPLAIN'			=> 'Increase the version to force a fresh prompt for every visitor when the consent text or integrations materially change.',
 	'ACP_CONSENTMANAGER_FORCE_REPROMPT'				=> 'Force re-prompt',
