@@ -72,10 +72,13 @@ class listener implements EventSubscriberInterface
 			$this->helper->route('phpbb_consentmanager_log_controller'),
 			generate_link_hash('phpbb.consentmanager.log')
 		);
+		$categories = $this->consent_manager->get_categories();
 
 		$this->template->assign_vars(array(
-			'S_CONSENTMANAGER_ENABLED'	=> true,
-			'CONSENTMANAGER_PAYLOAD'	=> json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT),
+			'S_CONSENTMANAGER_ENABLED'				=> true,
+			'S_CONSENTMANAGER_ANALYTICS_ENABLED'	=> !empty($categories['analytics']['enabled']),
+			'S_CONSENTMANAGER_MARKETING_ENABLED'	=> !empty($categories['marketing']['enabled']),
+			'CONSENTMANAGER_PAYLOAD'				=> json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT),
 		));
 	}
 }

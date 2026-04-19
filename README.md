@@ -133,17 +133,17 @@ That is the normal pattern for extension-local JS files.
 
 If your extension writes live `<script>` tags directly in a template event, PHP registration by itself is **not** enough. Those tags would still run as soon as the browser parses them.
 
-For that pattern, your template usually keeps the same `<script>` tags and conditionally adds Consent Manager's placeholder attributes:
+For that pattern, your template usually keeps the same `<script>` tags and conditionally adds Consent Manager's placeholder attributes with the template flag for the matching category:
 
 ```html
-<script{% if S_CONSENTMANAGER_ENABLED %} type="text/plain" data-consent-category="analytics"{% endif %} src="https://cdn.example.com/analytics.js"></script>
+<script{% if S_CONSENTMANAGER_ANALYTICS_ENABLED %} type="text/plain" data-consent-category="analytics"{% endif %} src="https://cdn.example.com/analytics.js"></script>
 
-<script{% if S_CONSENTMANAGER_ENABLED %} type="text/plain" data-consent-category="analytics"{% endif %}>
+<script{% if S_CONSENTMANAGER_ANALYTICS_ENABLED %} type="text/plain" data-consent-category="analytics"{% endif %}>
 	window.exampleTracker && window.exampleTracker.page();
 </script>
 ```
 
-When `S_CONSENTMANAGER_ENABLED` is true, Consent Manager sees `type="text/plain"` plus `data-consent-category` and upgrades the placeholder after the matching category is allowed. When Consent Manager is absent, those attributes are omitted and the same tags run normally.
+Use the template flag for the category your integration belongs to, such as `S_CONSENTMANAGER_ANALYTICS_ENABLED` or `S_CONSENTMANAGER_MARKETING_ENABLED`. When that category is enabled, Consent Manager sees `type="text/plain"` plus `data-consent-category` and upgrades the placeholder after the matching category is allowed. When Consent Manager is absent or that category is disabled in the ACP, those attributes are omitted and the same tags run normally.
 
 `type="text/plain"` is intentionally inert, so do not output it unconditionally unless your extension depends on Consent Manager being installed.
 
