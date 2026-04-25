@@ -1,26 +1,25 @@
 (function(window, document) {
 	'use strict';
 
-	var payload = window.phpbbConsentManagerPayload || null;
-	var existingApi = window.consentManager || {};
-	var queued = existingApi._queue ? existingApi._queue.slice(0) : [];
-	var listeners = [];
-	var registry = {};
-	var executedScripts = {};
-	var executedCategories = {};
-	var root = null;
-	var state = null;
-	var isRendered = false;
-	var isBound = false;
-	var pendingOpenSettings = false;
-	var keydownBound = false;
-	var lastFocusedElement = null;
-	var categoriesById = {};
-	var requiredCategories = [];
-	var enabledCategories = [];
-	var optionalCategories = [];
-	var hasStructuredPolicy = false;
-	var i;
+	const payload = window.phpbbConsentManagerPayload || null;
+	const existingApi = window.consentManager || {};
+	const queued = existingApi._queue ? existingApi._queue.slice(0) : [];
+	const listeners = [];
+	const registry = {};
+	const executedScripts = {};
+	const executedCategories = {};
+	let root = null;
+	let state = null;
+	let isRendered = false;
+	let isBound = false;
+	let pendingOpenSettings = false;
+	let keydownBound = false;
+	let lastFocusedElement = null;
+	const categoriesById = {};
+	let requiredCategories = [];
+	let enabledCategories = [];
+	let optionalCategories = [];
+	let hasStructuredPolicy = false;
 
 	if (!payload || !payload.categories)
 	{
@@ -32,7 +31,7 @@
 		return Object.prototype.toString.call(value) === '[object Array]';
 	}
 
-	for (i = 0; i < payload.categories.length; i++)
+	for (let i = 0; i < payload.categories.length; i++)
 	{
 		categoriesById[payload.categories[i].id] = payload.categories[i];
 	}
@@ -55,7 +54,7 @@
 	hasStructuredPolicy = isArray(payload.requiredCategories) && isArray(payload.enabledCategories) && isArray(payload.optionalCategories);
 	if (!hasStructuredPolicy)
 	{
-		for (i = 0; i < payload.categories.length; i++)
+		for (let i = 0; i < payload.categories.length; i++)
 		{
 			if (payload.categories[i].enabled)
 			{
@@ -94,7 +93,7 @@
 
 	function setCookie(name, value, maxAge)
 	{
-		var cookie = name + '=' + encodeURIComponent(value) + '; path=/; SameSite=Lax';
+		let cookie = name + '=' + encodeURIComponent(value) + '; path=/; SameSite=Lax';
 
 		if (typeof maxAge === 'number')
 		{
@@ -111,10 +110,9 @@
 
 	function getCookie(name)
 	{
-		var cookies = document.cookie ? document.cookie.split('; ') : [];
-		var index;
+		const cookies = document.cookie ? document.cookie.split('; ') : [];
 
-		for (index = 0; index < cookies.length; index++)
+		for (let index = 0; index < cookies.length; index++)
 		{
 			if (cookies[index].indexOf(name + '=') === 0)
 			{
@@ -143,7 +141,7 @@
 
 	function persistState(nextState)
 	{
-		var serialized = JSON.stringify(nextState);
+		const serialized = JSON.stringify(nextState);
 
 		try
 		{
@@ -161,18 +159,16 @@
 
 	function normalizeCategories(categories)
 	{
-		var normalized = requiredCategories.slice(0);
-		var index;
-		var categoryId;
+		const normalized = requiredCategories.slice(0);
 
 		if (!isArray(categories))
 		{
 			return unique(normalized);
 		}
 
-		for (index = 0; index < categories.length; index++)
+		for (let index = 0; index < categories.length; index++)
 		{
-			categoryId = String(categories[index]);
+			const categoryId = String(categories[index]);
 			if (requiredCategories.indexOf(categoryId) === -1 && enabledCategories.indexOf(categoryId) !== -1 && categoriesById[categoryId])
 			{
 				normalized.push(categoryId);
@@ -184,14 +180,12 @@
 
 	function validateState(candidate)
 	{
-		var timestamp;
-
 		if (!candidate || candidate.version !== payload.version || !isArray(candidate.categories))
 		{
 			return null;
 		}
 
-		timestamp = typeof candidate.timestamp === 'string' ? candidate.timestamp : '';
+		const timestamp = typeof candidate.timestamp === 'string' ? candidate.timestamp : '';
 
 		return {
 			categories: normalizeCategories(candidate.categories),
@@ -210,13 +204,10 @@
 
 	function choosePreferredState(localState, cookieState)
 	{
-		var localTime;
-		var cookieTime;
-
 		if (localState && cookieState)
 		{
-			localTime = Date.parse(localState.timestamp || '');
-			cookieTime = Date.parse(cookieState.timestamp || '');
+			const localTime = Date.parse(localState.timestamp || '');
+			const cookieTime = Date.parse(cookieState.timestamp || '');
 
 			if (!isNaN(localTime) && !isNaN(cookieTime))
 			{
@@ -229,10 +220,10 @@
 
 	function loadAndSyncState()
 	{
-		var localRaw = '';
-		var cookieRaw = getCookie(payload.cookieName);
-		var localState = null;
-		var cookieState = null;
+		let localRaw = '';
+		const cookieRaw = getCookie(payload.cookieName);
+		let localState = null;
+		let cookieState = null;
 
 		try
 		{
@@ -274,10 +265,9 @@
 
 	function unique(items)
 	{
-		var deduplicated = [];
-		var index;
+		const deduplicated = [];
 
-		for (index = 0; index < items.length; index++)
+		for (let index = 0; index < items.length; index++)
 		{
 			if (deduplicated.indexOf(items[index]) === -1)
 			{
@@ -309,10 +299,9 @@
 
 	function emitChange()
 	{
-		var snapshot = getStateSnapshot();
-		var index;
+		const snapshot = getStateSnapshot();
 
-		for (index = 0; index < listeners.length; index++)
+		for (let index = 0; index < listeners.length; index++)
 		{
 			try
 			{
@@ -335,16 +324,14 @@
 
 	function shouldReload(previousState, nextState)
 	{
-		var removedCategories = [];
-		var index;
-		var scriptId;
+		const removedCategories = [];
 
 		if (!previousState)
 		{
 			return false;
 		}
 
-		for (index = 0; index < previousState.categories.length; index++)
+		for (let index = 0; index < previousState.categories.length; index++)
 		{
 			if (requiredCategories.indexOf(previousState.categories[index]) === -1 && nextState.categories.indexOf(previousState.categories[index]) === -1)
 			{
@@ -352,7 +339,7 @@
 			}
 		}
 
-		for (scriptId in executedScripts)
+		for (const scriptId in executedScripts)
 		{
 			if (executedScripts.hasOwnProperty(scriptId) && removedCategories.indexOf(executedScripts[scriptId]) !== -1)
 			{
@@ -360,7 +347,7 @@
 			}
 		}
 
-		for (index = 0; index < removedCategories.length; index++)
+		for (let index = 0; index < removedCategories.length; index++)
 		{
 			if (executedCategories[removedCategories[index]])
 			{
@@ -373,14 +360,12 @@
 
 	function logDecision()
 	{
-		var request;
-
 		if (!payload.logEndpoint || !state)
 		{
 			return;
 		}
 
-		request = new XMLHttpRequest();
+		const request = new XMLHttpRequest();
 		request.open('POST', payload.logEndpoint, true);
 		request.setRequestHeader('Content-Type', 'application/json');
 		request.send(JSON.stringify({
@@ -392,12 +377,12 @@
 
 	function setState(categories)
 	{
-		var nextState = {
+		const nextState = {
 			categories: normalizeCategories(categories),
 			timestamp: new Date().toISOString(),
 			version: payload.version
 		};
-		var reloadRequired = shouldReload(state, nextState);
+		const reloadRequired = shouldReload(state, nextState);
 
 		if (state && sameCategories(state.categories, nextState.categories))
 		{
@@ -423,17 +408,14 @@
 
 	function isSafeScriptSource(src)
 	{
-		var link;
-		var protocol;
-
 		if (!src || /[<>"']/.test(src) || src.indexOf('//') === 0 || /^(?:javascript|data|vbscript|file):/i.test(src))
 		{
 			return false;
 		}
 
-		link = document.createElement('a');
+		const link = document.createElement('a');
 		link.href = src;
-		protocol = (link.protocol || '').toLowerCase();
+		const protocol = (link.protocol || '').toLowerCase();
 
 		return protocol === '' || protocol === 'http:' || protocol === 'https:';
 	}
@@ -448,9 +430,7 @@
 
 	function applyAttributes(element, attributes)
 	{
-		var name;
-
-		for (name in attributes)
+		for (const name in attributes)
 		{
 			if (attributes.hasOwnProperty(name) && isSafeAttributeName(name))
 			{
@@ -461,8 +441,6 @@
 
 	function executeScript(script)
 	{
-		var element;
-
 		if (!script || !script.id || executedScripts[script.id] || !hasConsent(script.category))
 		{
 			return false;
@@ -478,7 +456,7 @@
 			return false;
 		}
 
-		element = document.createElement('script');
+		const element = document.createElement('script');
 		element.type = 'text/javascript';
 
 		if (script.src)
@@ -534,9 +512,7 @@
 
 	function processRegisteredScripts()
 	{
-		var scriptId;
-
-		for (scriptId in registry)
+		for (const scriptId in registry)
 		{
 			if (registry.hasOwnProperty(scriptId))
 			{
@@ -547,9 +523,7 @@
 
 	function collectDeferredNodes(scope)
 	{
-		var nodes = [];
-		var matched;
-		var index;
+		const nodes = [];
 
 		if (!scope)
 		{
@@ -563,8 +537,8 @@
 
 		if (scope.querySelectorAll)
 		{
-			matched = scope.querySelectorAll(payload.deferredSelector);
-			for (index = 0; index < matched.length; index++)
+			const matched = scope.querySelectorAll(payload.deferredSelector);
+			for (let index = 0; index < matched.length; index++)
 			{
 				nodes.push(matched[index]);
 			}
@@ -575,37 +549,30 @@
 
 	function processDeferredNodes(scope)
 	{
-		var nodes = collectDeferredNodes(scope);
-		var index;
-		var source;
-		var liveScript;
-		var attributeIndex;
-		var attribute;
-		var sourceUrl;
-		var category;
+		const nodes = collectDeferredNodes(scope);
 
-		for (index = 0; index < nodes.length; index++)
+		for (let index = 0; index < nodes.length; index++)
 		{
-			source = nodes[index];
-			category = source.getAttribute('data-consent-category');
+			const source = nodes[index];
+			const category = source.getAttribute('data-consent-category');
 
 			if (source.getAttribute('data-consent-processed') === '1' || !hasConsent(category))
 			{
 				continue;
 			}
 
-			sourceUrl = source.getAttribute('src');
+			const sourceUrl = source.getAttribute('src');
 			if (sourceUrl && !isSafeScriptSource(sourceUrl))
 			{
 				continue;
 			}
 
-			liveScript = document.createElement('script');
+			const liveScript = document.createElement('script');
 			liveScript.type = 'text/javascript';
 
-			for (attributeIndex = 0; attributeIndex < source.attributes.length; attributeIndex++)
+			for (let attributeIndex = 0; attributeIndex < source.attributes.length; attributeIndex++)
 			{
-				attribute = source.attributes[attributeIndex];
+				const attribute = source.attributes[attributeIndex];
 				if (attribute.name === 'type' || attribute.name.indexOf('data-consent-') === 0 || attribute.name === 'src')
 				{
 					continue;
@@ -642,20 +609,15 @@
 
 	function observeDeferredNodes()
 	{
-		var observer;
-
 		if (typeof MutationObserver === 'undefined' || !document.documentElement)
 		{
 			return;
 		}
 
-		observer = new MutationObserver(function(mutations) {
-			var mutationIndex;
-			var nodeIndex;
-
-			for (mutationIndex = 0; mutationIndex < mutations.length; mutationIndex++)
+		const observer = new MutationObserver(function(mutations) {
+			for (let mutationIndex = 0; mutationIndex < mutations.length; mutationIndex++)
 			{
-				for (nodeIndex = 0; nodeIndex < mutations[mutationIndex].addedNodes.length; nodeIndex++)
+				for (let nodeIndex = 0; nodeIndex < mutations[mutationIndex].addedNodes.length; nodeIndex++)
 				{
 					processDeferredNodes(mutations[mutationIndex].addedNodes[nodeIndex]);
 				}
@@ -694,18 +656,14 @@
 
 	function updateUi()
 	{
-		var banner;
-		var link;
-		var linkItem;
-
 		if (!isRendered)
 		{
 			return;
 		}
 
-		banner = document.getElementById('consent-manager-banner');
-		link = document.getElementById('consent-manager-link');
-		linkItem = document.getElementById('consent-manager-link-item');
+		const banner = document.getElementById('consent-manager-banner');
+		const link = document.getElementById('consent-manager-link');
+		const linkItem = document.getElementById('consent-manager-link-item');
 
 		if (banner)
 		{
@@ -725,17 +683,15 @@
 
 	function selectedOptionalCategories()
 	{
-		var selected = [];
-		var checkboxes;
-		var index;
+		const selected = [];
 
 		if (!root)
 		{
 			return selected;
 		}
 
-		checkboxes = root.querySelectorAll('[data-consent-toggle]');
-		for (index = 0; index < checkboxes.length; index++)
+		const checkboxes = root.querySelectorAll('[data-consent-toggle]');
+		for (let index = 0; index < checkboxes.length; index++)
 		{
 			if (checkboxes[index].checked)
 			{
@@ -753,23 +709,21 @@
 
 	function getModalPanel()
 	{
-		var modal = getModal();
+		const modal = getModal();
 		return modal ? modal.querySelector('.consent-manager-modal-panel') : null;
 	}
 
 	function getFocusableNodes(container)
 	{
-		var nodes;
-		var focusable = [];
-		var index;
+		const focusable = [];
 
 		if (!container)
 		{
 			return focusable;
 		}
 
-		nodes = container.querySelectorAll('a[href], button:not([disabled]), textarea, input:not([disabled]), select, [tabindex]:not([tabindex="-1"])');
-		for (index = 0; index < nodes.length; index++)
+		const nodes = container.querySelectorAll('a[href], button:not([disabled]), textarea, input:not([disabled]), select, [tabindex]:not([tabindex="-1"])');
+		for (let index = 0; index < nodes.length; index++)
 		{
 			if (!nodes[index].hidden)
 			{
@@ -782,10 +736,7 @@
 
 	function handleModalKeydown(event)
 	{
-		var modal = getModal();
-		var focusable;
-		var first;
-		var last;
+		const modal = getModal();
 
 		if (!modal || modal.hidden)
 		{
@@ -803,14 +754,14 @@
 			return;
 		}
 
-		focusable = getFocusableNodes(getModalPanel());
+		const focusable = getFocusableNodes(getModalPanel());
 		if (!focusable.length)
 		{
 			return;
 		}
 
-		first = focusable[0];
-		last = focusable[focusable.length - 1];
+		const first = focusable[0];
+		const last = focusable[focusable.length - 1];
 
 		if (event.shiftKey && document.activeElement === first)
 		{
@@ -826,22 +777,17 @@
 
 	function openSettings()
 	{
-		var modal;
-		var panel;
-		var checkboxes;
-		var index;
-
 		if (!isRendered)
 		{
 			pendingOpenSettings = true;
 			return;
 		}
 
-		modal = getModal();
-		panel = getModalPanel();
-		checkboxes = root.querySelectorAll('[data-consent-toggle]');
+		const modal = getModal();
+		const panel = getModalPanel();
+		const checkboxes = root.querySelectorAll('[data-consent-toggle]');
 
-		for (index = 0; index < checkboxes.length; index++)
+		for (let index = 0; index < checkboxes.length; index++)
 		{
 			checkboxes[index].checked = hasConsent(checkboxes[index].getAttribute('data-consent-toggle'));
 		}
@@ -873,7 +819,7 @@
 
 	function closeSettings()
 	{
-		var modal = getModal();
+		const modal = getModal();
 
 		if (!modal)
 		{
@@ -901,10 +847,10 @@
 
 	function bindUi()
 	{
-		var footerLink = document.getElementById('consent-manager-link');
+		const footerLink = document.getElementById('consent-manager-link');
 
 		root.addEventListener('click', function(event) {
-			var action = event.target.getAttribute('data-consent-action');
+			const action = event.target.getAttribute('data-consent-action');
 
 			if (!action)
 			{
@@ -973,7 +919,7 @@
 		callback(api);
 	}
 
-	var api = {
+	const api = {
 		registerScript: registerScript,
 		hasConsent: hasConsent,
 		onChange: onChange,
@@ -984,12 +930,12 @@
 
 	window.consentManager = api;
 
-	for (i = 0; i < payload.scripts.length; i++)
+	for (let i = 0; i < payload.scripts.length; i++)
 	{
 		registerScript(payload.scripts[i].id, payload.scripts[i]);
 	}
 
-	for (i = 0; i < queued.length; i++)
+	for (let i = 0; i < queued.length; i++)
 	{
 		if (queued[i][0] === 'registerScript')
 		{
