@@ -24,7 +24,7 @@ Your extension will then appear in the consent UI, and optional scripts will sta
   - [Pattern 1: A script your extension already loads with INCLUDEJS](#pattern-1-a-script-your-extension-already-loads-with-includejs)
   - [Pattern 2: A script your extension already prints with a SCRIPT tag](#pattern-2-a-script-your-extension-already-prints-with-a-script-tag)
   - [Pattern 3: A script contains both necessary and optional code](#pattern-3-a-script-contains-both-necessary-and-optional-code)
-  - [Pattern 4: Remote script not already loaded by your extension](#pattern-4-less-common-remote-script-not-already-loaded-by-your-extension)
+  - [Pattern 4: Remote script not already loaded by your extension](#pattern-4-remote-script-not-already-loaded-by-your-extension)
 - [JavaScript API](#javascript-api)
   - [`consentManager.ready(callback)`](#consentmanagerreadycallback)
   - [`consentManager.hasConsent(category)`](#consentmanagerhasconsentcategory)
@@ -33,7 +33,6 @@ Your extension will then appear in the consent UI, and optional scripts will sta
   - [`consentManager.openSettings()`](#consentmanageropensettings)
   - [`consentManager.getState()`](#consentmanagergetstate)
   - [`window.phpbbConsentManagerPayload`](#windowphpbbconsentmanagerpayload)
-- [What happens when consent changes](#what-happens-when-consent-changes)
 - [Examples of Consent Manager integrations](#examples-of-consent-manager-integrations)
 
 ## Strategy guide
@@ -43,11 +42,7 @@ Your extension will then appear in the consent UI, and optional scripts will sta
 | Your extension loads JavaScript files with `INCLUDEJS`                                                                                                     | Do **PHP registration with `asset`**, then use a fallback so `INCLUDEJS` only runs when the Consent Manager category is unavailable ([Pattern 1](#pattern-1-a-script-your-extension-already-loads-with-includejs))             |
 | Your extension prints `<script>` tags directly in HTML template files                                                                                      | Do **basic PHP registration**, and turn the `<script>` tag into a deferred placeholder with `type="text/plain"` and `data-consent-category` ([Pattern 2](#pattern-2-a-script-your-extension-already-prints-with-a-script-tag)) |
 | Your JavaScript file contains both necessary logic and optional data tracking logic                                                                        | Do **basic PHP registration**, keep loading the file normally, and gate only the optional part with the **JavaScript API** ([Pattern 3](#pattern-3-a-script-contains-both-necessary-and-optional-code))                        |
-| You want Consent Manager to load a remote script from a CDN or third-party site, and your extension does **not** print or include that script tag anywhere | Do **PHP registration with `src`** ([Pattern 4](#pattern-4-less-common-remote-script-not-already-loaded-by-your-extension))                                                                                                    |
-
-> Info: **`src` / `asset` / placeholder tags are for delaying an entire script.**
->
-> If only a small part of the file is optional, you do not have to delay the whole file. Use PHP registration for the UI, then gate the optional code with the JavaScript API.
+| You want Consent Manager to load a remote script from a CDN or third-party site, and your extension does **not** print or include that script tag anywhere | Do **PHP registration with `src`** ([Pattern 4](#pattern-4-remote-script-not-already-loaded-by-your-extension))                                                                                                                |
 
 ## PHP registration
 
@@ -467,7 +462,7 @@ Use this when your own JavaScript should only run after consent.
 
 Registers a listener for consent changes.
 
-The callback runs immediately with the current state, and then again whenever the visitor changes their preferences.
+The callback runs immediately with the current state and then again whenever the visitor changes their preferences.
 
 ```js
 window.consentManager.ready(function (cm) {
@@ -494,7 +489,17 @@ The state object is either `null` or:
 
 Because the callback fires immediately, use the `state` argument to inspect the current consent snapshot right away. If you need one-time setup, add your own guard in addition to `state`, as shown in Pattern 3.
 
-> Tip: Use `onChange()` to clean up when consent is revoked. When `state` is `null` or `hasConsent()` returns `false`, delete any cookies, clear local storage, and stop any active tracking — as shown in the example above. **This is an important part of GDPR compliance.**
+Consent changes are where `onChange()` matters most:
+
+- when consent is granted, Consent Manager executes newly allowed scripts and then notifies `onChange()` listeners
+- when consent is revoked for a category that already ran scripts, Consent Manager reloads the page
+
+Keep this in mind when writing integration code:
+
+- make setup code safe to run again after a reload
+- assume a category can be turned off later
+- keep behavior for each category separate where possible
+- use `onChange()` to delete cookies, clear local storage, and stop any active tracking when `state` is `null` or `hasConsent()` returns `false`, as shown in the example above (**this cleanup is an important part of GDPR compliance.**)
 
 ### `consentManager.registerScript(id, options)`
 
@@ -557,22 +562,11 @@ Unlike `ready()`, `onChange()`, `registerScript()`, and `openSettings()`, this m
 
 Exposes Consent Manager's startup data. This is for internal use; extension integrations should use `window.consentManager` instead.
 
-## What happens when consent changes
-
-When consent is granted, Consent Manager executes newly allowed scripts and notifies listeners via the JavaScript API.
-
-When consent is revoked for a category that already ran scripts, Consent Manager reloads the page.
-
-Keep this in mind when writing integration code:
-
-- make setup code safe to run again after a reload
-- assume a category can be turned off later
-- keep behavior for each category separate where possible
-- use `onChange()` if you need to delete cookies, local storage, or other optional data after consent is revoked
-
 ## Examples of Consent Manager integrations
 
 ### phpBB Google Analytics Extension
+
+For this extension, which adds a Google Analytics code snippet to the page, Pattern 2 was the best choice.
 
 The following PHP registration was added to the extension's event listener class:
 
@@ -622,3 +616,10 @@ The following placeholder changes were made to its `script` tags in its template
 	</script>
 {% endif %}
 ```
+We used the `S_CONSENTMANAGER_ANALYTICS_ENABLED` flag and the `data-consent-category="analytics"` attribute to tell Consent Manager when it may activate the script.
+
+These changes ensure that Google Analytics appears in the Consent UI to the user, and that its scripts only run when consent is granted.
+
+---
+
+[↑ Back to Top](#consent-manager-developer-documentation)
