@@ -362,13 +362,24 @@ window.exampleWidget.init();
 
 // Optional code: only this part should wait for consent.
 window.consentManager.ready(function (cm) {
+	// Flag to prevent double-tracking.
 	var analyticsStarted = false;
 
-	cm.onChange(function () {
-		if (analyticsStarted || !cm.hasConsent('analytics')) {
+	// Listen for changes in consent.
+	cm.onChange(function (state) {
+		// If consent is missing or has been revoked, stop tracking and clean up.
+		if (!state || !cm.hasConsent('analytics')) {
+			analyticsStarted = false;
+			window.exampleTracker.deleteCookies();
 			return;
 		}
 
+		// Avoid duplicate setup while consent remains granted.
+		if (analyticsStarted) {
+			return;
+		}
+
+		// Start tracking when consent is granted.
 		analyticsStarted = true;
 		window.exampleTracker.init();
 		window.exampleTracker.page();
@@ -382,6 +393,8 @@ window.exampleWidget.bindEvents = function () {
 ```
 
 This is the right pattern when only a small part of the file is non-essential.
+
+Here, `state` and `cm.hasConsent('analytics')` tell you whether analytics consent is currently available. The separate `analyticsStarted` flag is not a replacement for `state` — it is only a one-time guard so `window.exampleTracker.init()` does not run again while consent remains granted. Reset it when consent is missing if your code needs to start again after a later re-grant on the same page.
 
 ### Pattern 4: Remote script not already loaded by your extension
 
@@ -479,7 +492,7 @@ The state object is either `null` or:
 }
 ```
 
-Because the callback fires immediately, protect one-time setup with your own guard if needed.
+Because the callback fires immediately, use the `state` argument to inspect the current consent snapshot right away. If you need one-time setup, add your own guard in addition to `state`, as shown in Pattern 3.
 
 > Tip: Use `onChange()` to clean up when consent is revoked. When `state` is `null` or `hasConsent()` returns `false`, delete any cookies, clear local storage, and stop any active tracking — as shown in the example above. **This is an important part of GDPR compliance.**
 
