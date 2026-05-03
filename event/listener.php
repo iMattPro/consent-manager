@@ -65,7 +65,7 @@ class listener implements EventSubscriberInterface
 	 */
 	public function inject_frontend()
 	{
-		if (defined('ADMIN_START') || defined('IN_INSTALL'))
+		if ($this->is_acp_or_installer())
 		{
 			return;
 		}
@@ -90,5 +90,15 @@ class listener implements EventSubscriberInterface
 				$this->template->assign_block_vars('CONSENTMANAGER_CATEGORIES.CONSENTMANAGER_SERVICES', $service);
 			}
 		}
+	}
+
+	/**
+	 * Determine whether we are in the ACP or the installer.
+	 *
+	 * @return bool
+	 */
+	protected function is_acp_or_installer()
+	{
+		return defined('ADMIN_START') || defined('IN_INSTALL');
 	}
 }

@@ -40,30 +40,17 @@ class listener_test extends \phpbb_test_case
 	public function inject_frontend_assigns_template_payload_data()
 	{
 		return [
-			'front end'  => [false, false],
-			'in admin'   => [true, false],
-			'in install' => [false, true],
+			'front end'  => [true],
+			'in admin'   => [false],
+			'in install' => [false],
 		];
 	}
 
 	/**
 	 * @dataProvider inject_frontend_assigns_template_payload_data
-	 * @runInSeparateProcess
 	 */
-	public function test_inject_frontend_assigns_template_payload($in_admin, $in_install)
+	public function test_inject_frontend_assigns_template_payload($invoke)
 	{
-		if ($in_admin)
-		{
-			define('ADMIN_START', true);
-		}
-
-		if ($in_install)
-		{
-			define('IN_INSTALL', true);
-		}
-
-		$invoke = !($in_admin || $in_install);
-
 		$helper = $this->createMock('\phpbb\controller\helper');
 		$helper->expects($invoke ? self::once() : self::never())
 			->method('route')
@@ -130,12 +117,32 @@ class listener_test extends \phpbb_test_case
 				]]
 			);
 
-		$listener = new \phpbb\consentmanager\event\listener(
+		$listener = new class(
 			$helper,
 			$this->language,
 			$consent_manager,
-			$template
-		);
+			$template,
+			$invoke
+		) extends \phpbb\consentmanager\event\listener {
+			/** @var bool */
+			protected $is_frontend_context;
+
+			public function __construct($helper, $language, $consent_manager, $template, $is_frontend_context)
+			{
+				parent::__construct(
+					$helper,
+					$language,
+					$consent_manager,
+					$template
+				);
+				$this->is_frontend_context = $is_frontend_context;
+			}
+
+			protected function is_acp_or_installer()
+			{
+				return !$this->is_frontend_context;
+			}
+		};
 
 		$listener->inject_frontend();
 	}
