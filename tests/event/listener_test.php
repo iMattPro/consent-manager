@@ -12,170 +12,87 @@ namespace phpbb\consentmanager\tests\event;
 
 class listener_test extends \phpbb_test_case
 {
-	/** @var \phpbb\language\language */
-	protected $language;
-
-	protected function setUp(): void
-	{
-		parent::setUp();
-
-		global $user;
-
-		$this->language = $this->createMock('\phpbb\language\language');
-
-		$user = new \phpbb\user($this->language, '\phpbb\datetime');
-		$user->data = [
-			'user_id' => ANONYMOUS,
-			'user_form_salt' => 'listener-salt',
-		];
-	}
-
 	public function test_get_subscribed_events()
 	{
 		self::assertSame([
+			'core.user_setup' => 'load_language_on_setup',
+			'core.text_formatter_s9e_configure_after' => [['configure_iframe_embeds', -10]],
+			'core.text_formatter_s9e_renderer_setup' => 'configure_iframe_renderer',
 			'core.page_header_after' => 'inject_frontend',
 		], \phpbb\consentmanager\event\listener::getSubscribedEvents());
 	}
 
-	public function inject_frontend_assigns_template_payload_data()
+	public function test_load_language_on_setup_delegates_to_frontend_manager()
 	{
-		return [
-			'front end'  => [true],
-			'in admin'   => [false],
-			'in install' => [false],
-		];
-	}
-
-	/**
-	 * @dataProvider inject_frontend_assigns_template_payload_data
-	 */
-	public function test_inject_frontend_assigns_template_payload($invoke)
-	{
-		$helper = $this->createMock('\phpbb\controller\helper');
-		$helper->expects($invoke ? self::once() : self::never())
-			->method('route')
-			->with('phpbb_consentmanager_log_controller')
-			->willReturn('/app.php/consent/log');
-
-		$this->language->expects($invoke ? self::once() : self::never())
-			->method('add_lang')
-			->with('common', 'phpbb/consentmanager');
-
-		$consent_manager = $this->createMock('\phpbb\consentmanager\service\consent_manager_interface');
-		$consent_manager->expects($invoke ? self::once() : self::never())
-			->method('has_optional_categories')
-			->willReturn(true);
-		$consent_manager->expects($invoke ? self::once() : self::never())
-			->method('get_frontend_template_data')
-			->with('/app.php/consent/log', generate_link_hash('phpbb.consentmanager.log'))
-			->willReturn([
-				'S_CONSENTMANAGER_ENABLED' => true,
-				'CONSENTMANAGER_PAYLOAD' => '{"version":1}',
-			]);
-		$consent_manager->expects($invoke ? self::once() : self::never())
-			->method('get_frontend_category_data')
-			->willReturn([
-				[
-					'ID'          => 'necessary',
-					'LABEL'       => 'Necessary',
-					'DESCRIPTION' => 'Required cookies.',
-					'REQUIRED'    => true,
-					'services'    => [
-						0 => [
-							'LABEL'			=> 'Cookie baker',
-							'DESCRIPTION'	=> 'Delicious cookies',
-						]
-					],
-				],
-			]);
-
-		$template = $this->createMock('\phpbb\template\template');
-		$template->expects($invoke ? self::once() : self::never())
-			->method('assign_vars')
-			->with([
-				'S_CONSENTMANAGER_ENABLED' => true,
-				'CONSENTMANAGER_PAYLOAD' => '{"version":1}',
-			]);
-		$template->expects($invoke ? self::exactly(2) : self::never())
-			->method('assign_block_vars')
-			->withConsecutive(
-				['CONSENTMANAGER_CATEGORIES', [
-					'ID'          => 'necessary',
-					'LABEL'       => 'Necessary',
-					'DESCRIPTION' => 'Required cookies.',
-					'REQUIRED'    => true,
-					'services'    => [
-						0 => [
-							'LABEL'			=> 'Cookie baker',
-							'DESCRIPTION'	=> 'Delicious cookies',
-						]
-					],
-				]],
-				['CONSENTMANAGER_CATEGORIES.CONSENTMANAGER_SERVICES', [
-					'LABEL'			=> 'Cookie baker',
-					'DESCRIPTION'	=> 'Delicious cookies',
-				]]
-			);
-
-		$listener = new class(
-			$helper,
-			$this->language,
-			$consent_manager,
-			$template,
-			$invoke
-		) extends \phpbb\consentmanager\event\listener {
-			/** @var bool */
-			protected $is_frontend_context;
-
-			public function __construct($helper, $language, $consent_manager, $template, $is_frontend_context)
-			{
-				parent::__construct(
-					$helper,
-					$language,
-					$consent_manager,
-					$template
-				);
-				$this->is_frontend_context = $is_frontend_context;
-			}
-
-			protected function is_acp_or_installer()
-			{
-				return !$this->is_frontend_context;
-			}
-		};
-
-		$listener->inject_frontend();
-	}
-
-	public function test_inject_frontend_skips_category_blocks_when_frontend_disabled()
-	{
-		$helper = $this->createMock('\phpbb\controller\helper');
-		$helper->expects(self::never())
-			->method('route');
-
-		$this->language->expects(self::never())
-			->method('add_lang');
-
-		$consent_manager = $this->createMock('\phpbb\consentmanager\service\consent_manager_interface');
-		$consent_manager->expects(self::once())
-			->method('has_optional_categories')
-			->willReturn(false);
-		$consent_manager->expects(self::never())
-			->method('get_frontend_template_data');
-		$consent_manager->expects(self::never())
-			->method('get_frontend_category_data');
-
-		$template = $this->createMock('\phpbb\template\template');
-		$template->expects(self::never())
-			->method('assign_vars');
-		$template->expects(self::never())
-			->method('assign_block_vars');
+		$frontend_manager = $this->createMock('\phpbb\consentmanager\service\frontend_manager');
+		$frontend_manager->expects(self::once())
+			->method('get_setup_language_extensions')
+			->with([['ext_name' => 'phpbb/example', 'lang_set' => 'common']])
+			->willReturn([['ext_name' => 'phpbb/consentmanager', 'lang_set' => 'common']]);
 
 		$listener = new \phpbb\consentmanager\event\listener(
-			$helper,
-			$this->language,
-			$consent_manager,
-			$template
+			$frontend_manager,
+			$this->createMock('\phpbb\consentmanager\service\media_manager')
+		);
+
+		$event = new \phpbb\event\data([
+			'lang_set_ext' => [['ext_name' => 'phpbb/example', 'lang_set' => 'common']],
+		]);
+
+		$listener->load_language_on_setup($event);
+
+		self::assertSame([['ext_name' => 'phpbb/consentmanager', 'lang_set' => 'common']], $event['lang_set_ext']);
+	}
+
+	public function test_configure_iframe_embeds_delegates_to_media_manager()
+	{
+		$configurator = new \s9e\TextFormatter\Configurator();
+
+		$media_manager = $this->createMock('\phpbb\consentmanager\service\media_manager');
+		$media_manager->expects(self::once())
+			->method('configure_iframe_embeds')
+			->with($configurator);
+
+		$listener = new \phpbb\consentmanager\event\listener(
+			$this->createMock('\phpbb\consentmanager\service\frontend_manager'),
+			$media_manager
+		);
+
+		$listener->configure_iframe_embeds(new \phpbb\event\data([
+			'configurator' => $configurator,
+		]));
+	}
+
+	public function test_configure_iframe_renderer_delegates_to_media_manager()
+	{
+		$renderer = $this->getMockBuilder('\phpbb\textformatter\s9e\renderer')
+			->disableOriginalConstructor()
+			->getMock();
+
+		$media_manager = $this->createMock('\phpbb\consentmanager\service\media_manager');
+		$media_manager->expects(self::once())
+			->method('configure_iframe_renderer')
+			->with($renderer);
+
+		$listener = new \phpbb\consentmanager\event\listener(
+			$this->createMock('\phpbb\consentmanager\service\frontend_manager'),
+			$media_manager
+		);
+
+		$listener->configure_iframe_renderer(new \phpbb\event\data([
+			'renderer' => $renderer,
+		]));
+	}
+
+	public function test_inject_frontend_delegates_to_frontend_manager()
+	{
+		$frontend_manager = $this->createMock('\phpbb\consentmanager\service\frontend_manager');
+		$frontend_manager->expects(self::once())
+			->method('inject_frontend');
+
+		$listener = new \phpbb\consentmanager\event\listener(
+			$frontend_manager,
+			$this->createMock('\phpbb\consentmanager\service\media_manager')
 		);
 
 		$listener->inject_frontend();

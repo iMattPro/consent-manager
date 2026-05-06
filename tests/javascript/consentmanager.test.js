@@ -18,11 +18,12 @@ function createPayload(overrides) {
 		categories: [
 			{ id: 'necessary', enabled: true, required: true },
 			{ id: 'analytics', enabled: true, required: false },
+			{ id: 'media', enabled: true, required: false },
 			{ id: 'marketing', enabled: true, required: false }
 		],
 		requiredCategories: ['necessary'],
-		enabledCategories: ['necessary', 'analytics', 'marketing'],
-		optionalCategories: ['analytics', 'marketing'],
+		enabledCategories: ['necessary', 'analytics', 'media', 'marketing'],
+		optionalCategories: ['analytics', 'media', 'marketing'],
 		scripts: []
 	}, overrides || {});
 }
@@ -40,6 +41,7 @@ function createMarkup(extraMarkup) {
 					<div id="consent-manager-modal" hidden>
 						<div class="consent-manager-modal-panel" tabindex="-1">
 							<input type="checkbox" data-consent-toggle="analytics">
+							<input type="checkbox" data-consent-toggle="media">
 							<input type="checkbox" data-consent-toggle="marketing">
 							<button type="button" data-consent-action="accept-all">Accept all</button>
 							<button type="button" data-consent-action="reject-all">Reject all</button>
@@ -196,7 +198,7 @@ test('accept-all persists consent, logs the decision, and updates the UI state',
 	click(window, '[data-consent-action="accept-all"]');
 
 	expect(window.consentManager.getState()).toEqual({
-		categories: ['necessary', 'analytics', 'marketing'],
+		categories: ['necessary', 'analytics', 'media', 'marketing'],
 		timestamp: expect.any(String),
 		version: payload.version
 	});
@@ -210,7 +212,7 @@ test('accept-all persists consent, logs the decision, and updates the UI state',
 	expect(JSON.parse(requests[0].body)).toEqual({
 		hash: payload.logHash,
 		version: payload.version,
-		categories: ['necessary', 'analytics', 'marketing']
+		categories: ['necessary', 'analytics', 'media', 'marketing']
 	});
 });
 
@@ -254,4 +256,77 @@ test('processes deferred consent scripts and copies only safe attributes', () =>
 	expect(liveScript.getAttribute('data-extra')).toBe('allowed');
 	expect(liveScript.hasAttribute('onclick')).toBe(false);
 	expect(window.deferredLoaded).toBe(true);
+});
+
+test('activates deferred media embeds after media consent is granted', () => {
+	const { window, document } = setupConsentManager({
+		localState: createState(['necessary', 'media'], '2026-04-28T00:00:00.000Z'),
+		extraMarkup: `
+			<span data-consent-media-container="1" data-consent-category="media">
+				<span data-consent-media-placeholder="1">
+					<button type="button" data-consent-open-settings="1">Allow embedded media</button>
+				</span>
+				<span data-consent-media-content="1" hidden="hidden">
+					<iframe
+						data-consent-media-frame="1"
+						data-consent-src="https://media.example.com/embed/123"
+						data-consent-onload="window.mediaLoaded = true;"
+					></iframe>
+				</span>
+			</span>
+		`
+	});
+
+	const container = document.querySelector('[data-consent-media-container="1"]');
+	const placeholder = container.querySelector('[data-consent-media-placeholder="1"]');
+	const content = container.querySelector('[data-consent-media-content="1"]');
+	const frame = container.querySelector('[data-consent-media-frame="1"]');
+
+	expect(container.getAttribute('data-consent-processed')).toBe('1');
+	expect(placeholder.hidden).toBe(true);
+	expect(content.hidden).toBe(false);
+	expect(frame.getAttribute('src')).toBe('https://media.example.com/embed/123');
+	expect(frame.hasAttribute('data-consent-src')).toBe(false);
+	expect(frame.getAttribute('onload')).toBe('window.mediaLoaded = true;');
+
+	click(window, '[data-consent-open-settings="1"]');
+	expect(document.getElementById('consent-manager-modal').hidden).toBe(false);
+});
+
+test('saving newly granted media consent activates blocked embeds immediately', () => {
+	const { window, document } = setupConsentManager({
+		extraMarkup: `
+			<span data-consent-media-container="1" data-consent-category="media">
+				<span data-consent-media-placeholder="1">
+					<button type="button" data-consent-open-settings="1">Allow embedded media</button>
+				</span>
+				<span data-consent-media-content="1" hidden="hidden">
+					<iframe
+						data-consent-media-frame="1"
+						data-consent-src="https://media.example.com/embed/123"
+					></iframe>
+				</span>
+			</span>
+		`
+	});
+
+	const container = document.querySelector('[data-consent-media-container="1"]');
+	const placeholder = container.querySelector('[data-consent-media-placeholder="1"]');
+	const content = container.querySelector('[data-consent-media-content="1"]');
+	const frame = container.querySelector('[data-consent-media-frame="1"]');
+	const mediaCheckbox = document.querySelector('[data-consent-toggle="media"]');
+
+	expect(placeholder.hidden).toBe(false);
+	expect(content.hidden).toBe(true);
+	expect(frame.hasAttribute('src')).toBe(false);
+
+	click(window, '[data-consent-open-settings="1"]');
+	mediaCheckbox.checked = true;
+	click(window, '[data-consent-action="save-settings"]');
+
+	expect(container.getAttribute('data-consent-processed')).toBe('1');
+	expect(placeholder.hidden).toBe(true);
+	expect(content.hidden).toBe(false);
+	expect(frame.getAttribute('src')).toBe('https://media.example.com/embed/123');
+	expect(frame.hasAttribute('data-consent-src')).toBe(false);
 });

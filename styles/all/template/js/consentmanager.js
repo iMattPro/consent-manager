@@ -16,6 +16,7 @@
 	let keydownBound = false;
 	let lastFocusedElement = null;
 	const categoriesById = {};
+	const deferredEmbedSelector = '[data-consent-media-container][data-consent-category]';
 	let requiredCategories = [];
 	let enabledCategories = [];
 	let optionalCategories = [];
@@ -397,6 +398,7 @@
 		updateUi();
 		processRegisteredScripts();
 		processDeferredNodes(document);
+		processDeferredEmbeds(document);
 		logDecision();
 		emitChange();
 
@@ -418,6 +420,26 @@
 		const protocol = (link.protocol || '').toLowerCase();
 
 		return protocol === '' || protocol === 'http:' || protocol === 'https:';
+	}
+
+	function isSafeEmbedSource(src)
+	{
+		if (!src || /[<>"']/.test(src) || /^(?:javascript|data|vbscript|file):/i.test(src))
+		{
+			return false;
+		}
+
+		let normalized = src;
+		if (src.indexOf('//') === 0)
+		{
+			normalized = window.location.protocol + src;
+		}
+
+		const link = document.createElement('a');
+		link.href = normalized;
+		const protocol = (link.protocol || '').toLowerCase();
+
+		return protocol === 'http:' || protocol === 'https:';
 	}
 
 	function isSafeAttributeName(name)
@@ -521,7 +543,7 @@
 		}
 	}
 
-	function collectDeferredNodes(scope)
+	function collectMatchingNodes(scope, selector)
 	{
 		const nodes = [];
 
@@ -530,14 +552,14 @@
 			return nodes;
 		}
 
-		if (scope.nodeType === 1 && scope.matches && scope.matches(payload.deferredSelector))
+		if (scope.nodeType === 1 && scope.matches && scope.matches(selector))
 		{
 			nodes.push(scope);
 		}
 
 		if (scope.querySelectorAll)
 		{
-			const matched = scope.querySelectorAll(payload.deferredSelector);
+			const matched = scope.querySelectorAll(selector);
 			for (let index = 0; index < matched.length; index++)
 			{
 				nodes.push(matched[index]);
@@ -549,7 +571,7 @@
 
 	function processDeferredNodes(scope)
 	{
-		const nodes = collectDeferredNodes(scope);
+		const nodes = collectMatchingNodes(scope, payload.deferredSelector);
 
 		for (let index = 0; index < nodes.length; index++)
 		{
@@ -607,6 +629,76 @@
 		}
 	}
 
+	function processDeferredEmbeds(scope)
+	{
+		const nodes = collectMatchingNodes(scope, deferredEmbedSelector);
+
+		for (let index = 0; index < nodes.length; index++)
+		{
+			const container = nodes[index];
+			const category = container.getAttribute('data-consent-category');
+			const content = container.querySelector('[data-consent-media-content]');
+			const placeholder = container.querySelector('[data-consent-media-placeholder]');
+			const frames = container.querySelectorAll('[data-consent-media-frame]');
+
+			if (!content || !frames.length)
+			{
+				continue;
+			}
+
+			if (!hasConsent(category))
+			{
+				content.hidden = true;
+				if (placeholder)
+				{
+					placeholder.hidden = false;
+				}
+				continue;
+			}
+
+			if (container.getAttribute('data-consent-processed') !== '1')
+			{
+				let activated = 0;
+
+				for (let frameIndex = 0; frameIndex < frames.length; frameIndex++)
+				{
+					const frame = frames[frameIndex];
+					const source = frame.getAttribute('data-consent-src');
+
+					if (!source || !isSafeEmbedSource(source))
+					{
+						continue;
+					}
+
+					if (frame.hasAttribute('data-consent-onload'))
+					{
+						frame.setAttribute('onload', frame.getAttribute('data-consent-onload'));
+						frame.removeAttribute('data-consent-onload');
+					}
+
+					frame.setAttribute('src', source);
+					frame.removeAttribute('data-consent-src');
+
+					activated++;
+				}
+
+				if (!activated)
+				{
+					continue;
+				}
+
+				container.setAttribute('data-consent-processed', '1');
+			}
+
+			content.hidden = false;
+			if (placeholder)
+			{
+				placeholder.hidden = true;
+			}
+			executedCategories[category] = true;
+		}
+	}
+
 	function observeDeferredNodes()
 	{
 		if (typeof MutationObserver === 'undefined' || !document.documentElement)
@@ -620,6 +712,7 @@
 				for (let nodeIndex = 0; nodeIndex < mutations[mutationIndex].addedNodes.length; nodeIndex++)
 				{
 					processDeferredNodes(mutations[mutationIndex].addedNodes[nodeIndex]);
+					processDeferredEmbeds(mutations[mutationIndex].addedNodes[nodeIndex]);
 				}
 			}
 		});
@@ -895,6 +988,22 @@
 			});
 		}
 
+		document.addEventListener('click', function(event) {
+			let node = event.target;
+
+			while (node && node !== document)
+			{
+				if (node.getAttribute && node.getAttribute('data-consent-open-settings') === '1')
+				{
+					event.preventDefault();
+					openSettings();
+					return;
+				}
+
+				node = node.parentNode;
+			}
+		});
+
 		isBound = true;
 	}
 
@@ -957,12 +1066,14 @@
 
 	processRegisteredScripts();
 	processDeferredNodes(document);
+	processDeferredEmbeds(document);
 	observeDeferredNodes();
 
 	if (document.readyState === 'loading')
 	{
 		document.addEventListener('DOMContentLoaded', function() {
 			processRegisteredScripts();
+			processDeferredEmbeds(document);
 			initUi();
 		});
 	}

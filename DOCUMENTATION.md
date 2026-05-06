@@ -2,7 +2,7 @@
 
 Consent Manager is a *GDPR/cookie consent* extension for [phpBB](https://www.phpbb.com). It shows users a cookie consent dialog and delays all registered scripts until consent is granted.
 
-Extensions that use scripts for **non-functional** or **non-essential** purposes — analytics, advertising, pixels, tracking codes, and similar optional JavaScript or cookies — must register with Consent Manager so users can accept or reject them.
+Extensions that use scripts for **non-functional** or **non-essential** purposes — analytics, advertising, pixels, tracking codes, embedded media, and similar optional JavaScript or cookies — must register with Consent Manager so users can accept or reject them.
 
 Integration requires two things:
 
@@ -53,12 +53,13 @@ PHP registration tells Consent Manager:
 - the description shown to the user
 - optionally, which script Consent Manager should load after consent
 
-Consent Manager has three categories:
+Consent Manager has four categories:
 
 | Category    | Purpose                                       | How it works   |
 |-------------|-----------------------------------------------|----------------|
 | `necessary` | Technically required functionality            | Always allowed |
 | `analytics` | Metrics, analytics, usage tracking            | Optional       |
+| `media`     | Embedded videos and other external media      | Optional       |
 | `marketing` | Advertising, remarketing, cross-site tracking | Optional       |
 
 If you have scripts that are necessary for the board to work, you may register them with Consent Manager as `necessary`.
@@ -116,7 +117,7 @@ $accepted = $consent_manager->register(string $id, array $definition);
 ### Registration rules
 
 - Registration IDs and script IDs may only use letters, numbers, `.`, `_`, `:`, and `-`, and must start with a letter or number.
-- Supported categories are `necessary`, `analytics`, and `marketing`.
+- Supported categories are `necessary`, `analytics`, `media`, and `marketing`.
 - Each `scripts` definition must use **one** of these execution sources: `src`, `asset`, or `inline`.
 - `src` accepts `http`, `https`, or relative URLs. URLs such as `//example.com/...` are not allowed.
 - `asset` must be a local phpBB asset path such as `@vendor_example/js/file.js`.
@@ -208,12 +209,75 @@ Consent Manager assigns these template flags on board pages:
 
 - `S_CONSENTMANAGER_ENABLED`
 - `S_CONSENTMANAGER_ANALYTICS_ENABLED`
+- `S_CONSENTMANAGER_MEDIA_ENABLED`
 - `S_CONSENTMANAGER_MARKETING_ENABLED`
 
 Use the category flags when you need a fallback for boards where:
 
 - Consent Manager is not installed
 - Consent Manager is installed, but that category is disabled in the ACP
+
+## Embedded media patterns
+
+Consent Manager supports embedded media in two ways:
+
+1. **Automatic s9e iframe handling** for content rendered through phpBB's s9e text formatter
+2. **A manual deferred-media markup contract** for anything rendered outside s9e
+
+### Automatic s9e iframe handling
+
+When the `media` category is enabled, Consent Manager rewrites **s9e-rendered iframe output** into blocked placeholders until the visitor grants media consent.
+
+That includes:
+
+- Media Embed site templates
+- custom BBCodes rendered through s9e that output `<iframe>` markup
+- other s9e tag templates that render iframe-based embeds
+
+This happens on the server side during phpBB's text-formatter configuration, so the browser does not receive a live iframe `src` before consent.
+
+### Manual deferred-media markup contract
+
+For extensions or templates that render external media **outside** the s9e formatter, use this Consent Manager markup pattern:
+
+```html
+<span class="consent-manager-media-embed"
+	data-consent-media-container="1"
+	data-consent-category="media">
+	<span class="consent-manager-media-placeholder" data-consent-media-placeholder="1">
+		<span class="consent-manager-media-placeholder-copy">Embedded media is blocked until you allow media consent.</span>
+		<button type="button"
+			class="consent-manager-button consent-manager-media-button"
+			data-consent-open-settings="1">
+			Allow embedded media
+		</button>
+	</span>
+	<span class="consent-manager-media-content" data-consent-media-content="1" hidden="hidden">
+		<iframe
+			data-consent-media-frame="1"
+			data-consent-src="https://media.example.com/embed/123"
+			width="640"
+			height="360"
+			allowfullscreen></iframe>
+	</span>
+</span>
+```
+
+How it works:
+
+- `data-consent-media-container="1"` marks the deferred embed block
+- `data-consent-category="media"` ties the block to the media consent category
+- `data-consent-media-placeholder="1"` marks the blocked placeholder content
+- `data-consent-open-settings="1"` opens the Consent Manager settings modal
+- `data-consent-media-content="1"` wraps the real media markup
+- `data-consent-media-frame="1"` marks iframe nodes that should be activated after consent
+- `data-consent-src` stores the real iframe URL until Consent Manager moves it back to `src`
+
+Use this pattern for:
+
+- extension template files that print iframes directly
+- third-party widgets not rendered through s9e
+- custom board markup where you want a first-class media-consent UX
 
 ## Script-loading patterns
 
@@ -293,6 +357,7 @@ Add `{% if S_CONSENTMANAGER_MARKETING_ENABLED %} type="text/plain" data-consent-
 Use the correct `data-consent-category` value and template flag for your category:
 
 - Analytics: `"analytics"` and `S_CONSENTMANAGER_ANALYTICS_ENABLED`
+- Embedded media: `"media"` and `S_CONSENTMANAGER_MEDIA_ENABLED`
 - Marketing: `"marketing"` and `S_CONSENTMANAGER_MARKETING_ENABLED`
 
 What this does:

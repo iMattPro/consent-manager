@@ -209,6 +209,37 @@
 	padding: 0.9rem 1rem;
 }
 
+.consent-manager-media-embed {
+	display: block;
+	margin: 0.75rem 0;
+}
+
+.consent-manager-media-placeholder {
+	border: 1px solid var(--consent-manager-color-border-subtle);
+	border-radius: 12px;
+	background: #f8fafc;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.75rem;
+	padding: 1rem;
+}
+
+.consent-manager-media-placeholder-copy {
+	display: block;
+	color: var(--consent-manager-color-text-muted);
+	line-height: 1.5;
+}
+
+.consent-manager-media-button {
+	min-width: 0;
+}
+
+.consent-manager-media-placeholder[hidden],
+.consent-manager-media-content[hidden] {
+	display: none !important;
+}
+
 @media (max-width: 700px) {
 	.consent-manager-banner {
 		right: 0.75rem;

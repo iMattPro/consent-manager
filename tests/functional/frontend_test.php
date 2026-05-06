@@ -39,6 +39,7 @@ class frontend_test extends \phpbb_functional_test_case
 		$this->assertSame('phpbb_consent_manager', $payload['storageKey']);
 		$this->assertSame(array('necessary'), $payload['requiredCategories']);
 		$this->assertContains('analytics', $payload['optionalCategories']);
+		$this->assertContains('media', $payload['optionalCategories']);
 		$this->assertStringContainsString('app.php/consent/log', $payload['logEndpoint']);
 	}
 
@@ -165,6 +166,7 @@ class frontend_test extends \phpbb_functional_test_case
     		SET config_value = '1'
     		WHERE " . $this->db->sql_in_set('config_name', array(
 				'consentmanager_analytics_enabled',
+				'consentmanager_media_enabled',
 				'consentmanager_marketing_enabled',
 				'consentmanager_consent_version',
 			))
