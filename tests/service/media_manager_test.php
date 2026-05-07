@@ -60,8 +60,9 @@ class media_manager_test extends \phpbb_test_case
 		self::assertStringContainsString('data-consent-media-container="1"', $template);
 		self::assertStringContainsString('data-consent-src="https://video.example.com/embed/123"', $template);
 		self::assertStringContainsString('data-consent-onload="boot()"', $template);
-		self::assertStringContainsString('$L_CONSENTMANAGER_MEDIA_PLACEHOLDER', $template);
-		self::assertStringContainsString('data-consent-open-settings="1"', $template);
+		self::assertStringContainsString('class="consent-manager-media-placeholder-copy"', $template);
+		self::assertStringNotContainsString('$L_CONSENTMANAGER_MEDIA_PLACEHOLDER', $template);
+		self::assertStringNotContainsString('data-consent-open-settings="1"', $template);
 		self::assertStringContainsString('<iframe src="https://video.example.com/embed/123"', $template);
 		self::assertStringContainsString('<iframe src="https://video.example.com/embed/123" onload="boot()"', $template);
 	}
@@ -87,8 +88,9 @@ class media_manager_test extends \phpbb_test_case
 		self::assertStringContainsString('$S_CONSENTMANAGER_MEDIA_ALLOWED', $template);
 		self::assertStringContainsString('name="data-consent-media-container"', $template);
 		self::assertStringContainsString('name="data-consent-src"', $template);
-		self::assertStringContainsString('$L_CONSENTMANAGER_MEDIA_PLACEHOLDER', $template);
-		self::assertStringContainsString('data-consent-open-settings="1"', $template);
+		self::assertStringContainsString('class="consent-manager-media-placeholder-copy"', $template);
+		self::assertStringNotContainsString('$L_CONSENTMANAGER_MEDIA_PLACEHOLDER', $template);
+		self::assertStringNotContainsString('data-consent-open-settings="1"', $template);
 		self::assertStringContainsString('name="src"', $template);
 	}
 
@@ -115,7 +117,10 @@ class media_manager_test extends \phpbb_test_case
 		self::assertStringContainsString('$S_CONSENTMANAGER_MEDIA_ALLOWED', $template);
 		self::assertStringContainsString('data-consent-media-container="1"', $template);
 		self::assertStringContainsString('data-consent-src="https://video.example.com/embed/123"', $template);
+		self::assertStringContainsString('class="consent-manager-media-placeholder-copy"', $template);
 		self::assertStringContainsString('class="custom-embed consent-manager-media-content"', $template);
+		self::assertStringNotContainsString('$L_CONSENTMANAGER_MEDIA_PLACEHOLDER', $template);
+		self::assertStringNotContainsString('data-consent-open-settings="1"', $template);
 		self::assertStringContainsString('<iframe src="https://video.example.com/embed/123"', $template);
 	}
 

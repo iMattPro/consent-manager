@@ -39,5 +39,4 @@ $lang = array_merge($lang, [
 	'CONSENTMANAGER_CATEGORY_MARKETING'			=> 'Marketing',
 	'CONSENTMANAGER_CATEGORY_MARKETING_EXPLAIN'	=> 'Used for advertising, personalisation, and marketing measurement.',
 	'CONSENTMANAGER_MEDIA_PLACEHOLDER'			=> 'Embedded media is blocked until you allow media consent.',
-	'CONSENTMANAGER_MEDIA_OPEN_SETTINGS'		=> 'Allow embedded media',
 ]);

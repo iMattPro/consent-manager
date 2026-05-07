@@ -15,6 +15,7 @@ function createPayload(overrides) {
 		logEndpoint: '/app.php/consent/log',
 		logHash: 'test-hash',
 		deferredSelector: 'script[type="text/plain"][data-consent-category]',
+		mediaPlaceholderLabel: 'Embedded media is blocked until you allow media consent.',
 		categories: [
 			{ id: 'necessary', enabled: true, required: true },
 			{ id: 'analytics', enabled: true, required: false },
@@ -264,7 +265,7 @@ test('activates deferred media embeds after media consent is granted', () => {
 		extraMarkup: `
 			<span data-consent-media-container="1" data-consent-category="media">
 				<span data-consent-media-placeholder="1">
-					<button type="button" data-consent-open-settings="1">Allow embedded media</button>
+					<span class="consent-manager-media-placeholder-copy"></span>
 				</span>
 				<span data-consent-media-content="1" hidden="hidden">
 					<iframe
@@ -285,12 +286,10 @@ test('activates deferred media embeds after media consent is granted', () => {
 	expect(container.getAttribute('data-consent-processed')).toBe('1');
 	expect(placeholder.hidden).toBe(true);
 	expect(content.hidden).toBe(false);
+	expect(placeholder.querySelector('.consent-manager-media-placeholder-copy').textContent).toBe('Embedded media is blocked until you allow media consent.');
 	expect(frame.getAttribute('src')).toBe('https://media.example.com/embed/123');
 	expect(frame.hasAttribute('data-consent-src')).toBe(false);
 	expect(frame.getAttribute('onload')).toBe('window.mediaLoaded = true;');
-
-	click(window, '[data-consent-open-settings="1"]');
-	expect(document.getElementById('consent-manager-modal').hidden).toBe(false);
 });
 
 test('saving newly granted media consent activates blocked embeds immediately', () => {
@@ -298,7 +297,7 @@ test('saving newly granted media consent activates blocked embeds immediately', 
 		extraMarkup: `
 			<span data-consent-media-container="1" data-consent-category="media">
 				<span data-consent-media-placeholder="1">
-					<button type="button" data-consent-open-settings="1">Allow embedded media</button>
+					<span class="consent-manager-media-placeholder-copy"></span>
 				</span>
 				<span data-consent-media-content="1" hidden="hidden">
 					<iframe
@@ -318,9 +317,9 @@ test('saving newly granted media consent activates blocked embeds immediately', 
 
 	expect(placeholder.hidden).toBe(false);
 	expect(content.hidden).toBe(true);
+	expect(placeholder.querySelector('.consent-manager-media-placeholder-copy').textContent).toBe('Embedded media is blocked until you allow media consent.');
 	expect(frame.hasAttribute('src')).toBe(false);
 
-	click(window, '[data-consent-open-settings="1"]');
 	mediaCheckbox.checked = true;
 	click(window, '[data-consent-action="save-settings"]');
 

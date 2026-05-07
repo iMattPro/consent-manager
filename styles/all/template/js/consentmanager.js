@@ -27,6 +27,8 @@
 		return;
 	}
 
+	const mediaPlaceholderLabel = typeof payload.mediaPlaceholderLabel === 'string' ? payload.mediaPlaceholderLabel : '';
+
 	function isArray(value)
 	{
 		return Object.prototype.toString.call(value) === '[object Array]';
@@ -639,7 +641,16 @@
 			const category = container.getAttribute('data-consent-category');
 			const content = container.querySelector('[data-consent-media-content]');
 			const placeholder = container.querySelector('[data-consent-media-placeholder]');
+			const placeholderCopies = container.querySelectorAll('.consent-manager-media-placeholder-copy');
 			const frames = container.querySelectorAll('[data-consent-media-frame]');
+
+			if (mediaPlaceholderLabel)
+			{
+				for (let copyIndex = 0; copyIndex < placeholderCopies.length; copyIndex++)
+				{
+					placeholderCopies[copyIndex].textContent = mediaPlaceholderLabel;
+				}
+			}
 
 			if (!content || !frames.length)
 			{

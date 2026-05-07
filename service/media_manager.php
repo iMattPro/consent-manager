@@ -212,8 +212,7 @@ class media_manager
 	protected function get_media_placeholder_markup()
 	{
 		return '<span class="consent-manager-media-placeholder" data-consent-media-placeholder="1">'
-			. '<span class="consent-manager-media-placeholder-copy"><xsl:value-of xmlns:xsl="' . self::XSL_NAMESPACE . '" select="$L_CONSENTMANAGER_MEDIA_PLACEHOLDER"/></span>'
-			. '<button type="button" class="consent-manager-button consent-manager-media-button" data-consent-open-settings="1"><xsl:value-of xmlns:xsl="' . self::XSL_NAMESPACE . '" select="$L_CONSENTMANAGER_MEDIA_OPEN_SETTINGS"/></button>'
+			. '<span class="consent-manager-media-placeholder-copy"></span>'
 			. '</span>';
 	}
 

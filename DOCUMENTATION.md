@@ -245,12 +245,7 @@ For extensions or templates that render external media **outside** the s9e forma
 	data-consent-media-container="1"
 	data-consent-category="media">
 	<span class="consent-manager-media-placeholder" data-consent-media-placeholder="1">
-		<span class="consent-manager-media-placeholder-copy">Embedded media is blocked until you allow media consent.</span>
-		<button type="button"
-			class="consent-manager-button consent-manager-media-button"
-			data-consent-open-settings="1">
-			Allow embedded media
-		</button>
+		<span class="consent-manager-media-placeholder-copy"></span>
 	</span>
 	<span class="consent-manager-media-content" data-consent-media-content="1" hidden="hidden">
 		<iframe
@@ -268,7 +263,7 @@ How it works:
 - `data-consent-media-container="1"` marks the deferred embed block
 - `data-consent-category="media"` ties the block to the media consent category
 - `data-consent-media-placeholder="1"` marks the blocked placeholder content
-- `data-consent-open-settings="1"` opens the Consent Manager settings modal
+- `consent-manager-media-placeholder-copy` is populated from Consent Manager's frontend payload, so the localized placeholder text is translated once per page rather than once per rewritten embed
 - `data-consent-media-content="1"` wraps the real media markup
 - `data-consent-media-frame="1"` marks iframe nodes that should be activated after consent
 - `data-consent-src` stores the real iframe URL until Consent Manager moves it back to `src`
