@@ -37,6 +37,6 @@ $lang = array_merge($lang, [
 	'CONSENTMANAGER_CATEGORY_MARKETING'			=> 'Marketing',
 	'CONSENTMANAGER_CATEGORY_MARKETING_EXPLAIN'	=> 'Used for advertising, personalisation, and marketing measurement.',
 	'CONSENTMANAGER_CATEGORY_MEDIA'				=> 'Embedded media',
-	'CONSENTMANAGER_CATEGORY_MEDIA_EXPLAIN'		=> 'Controls whether external videos, players, and other embedded media are allowed to load.',
-	'CONSENTMANAGER_MEDIA_PLACEHOLDER'			=> 'Embedded media is blocked until you allow media in the Privacy Settings.',
+	'CONSENTMANAGER_CATEGORY_MEDIA_EXPLAIN'		=> 'Controls whether external videos, players, widgets, and other embedded media are allowed to load.',
+	'CONSENTMANAGER_MEDIA_PLACEHOLDER'			=> 'This content is blocked until you allow embedded media in the Privacy Settings.',
 ]);

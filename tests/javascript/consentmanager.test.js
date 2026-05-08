@@ -14,7 +14,7 @@ function createPayload(overrides) {
 		cookieName: 'phpbb_consent_state',
 		logEndpoint: '/app.php/consent/log',
 		logHash: 'test-hash',
-		mediaPlaceholderLabel: 'Embedded media is blocked until you allow media in the Privacy Settings.',
+		mediaPlaceholderLabel: 'This content is blocked until you allow embedded media in the Privacy Settings.',
 		categories: [
 			{ id: 'necessary', enabled: true, required: true },
 			{ id: 'analytics', enabled: true, required: false },
@@ -290,7 +290,7 @@ test('activates deferred media embeds after media consent is granted', () => {
 	expect(container.getAttribute('data-consent-processed')).toBe('1');
 	expect(placeholder.hidden).toBe(true);
 	expect(content.hidden).toBe(false);
-	expect(placeholder.textContent).toBe('Embedded media is blocked until you allow media in the Privacy Settings.');
+	expect(placeholder.textContent).toBe('This content is blocked until you allow embedded media in the Privacy Settings.');
 	expect(frame.getAttribute('src')).toBe('https://media.example.com/embed/123');
 	expect(frame.hasAttribute('data-consent-src')).toBe(false);
 	expect(frame.getAttribute('onload')).toBe('window.mediaLoaded = true;');
@@ -319,7 +319,7 @@ test('saving newly granted media consent activates blocked embeds immediately', 
 
 	expect(placeholder.hidden).toBe(false);
 	expect(content.hidden).toBe(true);
-	expect(placeholder.textContent).toBe('Embedded media is blocked until you allow media in the Privacy Settings.');
+	expect(placeholder.textContent).toBe('This content is blocked until you allow embedded media in the Privacy Settings.');
 	expect(frame.hasAttribute('src')).toBe(false);
 
 	mediaCheckbox.checked = true;
