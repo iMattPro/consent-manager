@@ -274,7 +274,6 @@ class consent_manager implements consent_manager_interface
 	 */
 	public function build_frontend_payload($log_url, $log_hash)
 	{
-		$this->language->add_lang('common', 'phpbb/consentmanager');
 		$this->collect_registrations();
 
 		$categories = $this->get_categories();

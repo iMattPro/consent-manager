@@ -60,28 +60,10 @@ class listener implements EventSubscriberInterface
 	public static function getSubscribedEvents()
 	{
 		return [
-			'core.user_setup' => 'load_language_on_setup',
 			'core.text_formatter_s9e_configure_after' => [['configure_iframe_embeds', -10]],
 			'core.text_formatter_s9e_renderer_setup' => 'configure_iframe_renderer',
 			'core.page_header_after' => 'inject_frontend',
 		];
-	}
-
-	/**
-	 * Load common language strings early enough for s9e-rendered placeholders.
-	 *
-	 * @param \phpbb\event\data $event Event data
-	 *
-	 * @return void
-	 */
-	public function load_language_on_setup($event)
-	{
-		$lang_set_ext = $event['lang_set_ext'];
-		$lang_set_ext[] = [
-			'ext_name' => 'phpbb/consentmanager',
-			'lang_set' => 'common',
-		];
-		$event['lang_set_ext'] = $lang_set_ext;
 	}
 
 	/**

@@ -33,33 +33,10 @@ class listener_test extends \phpbb_test_case
 	public function test_get_subscribed_events()
 	{
 		self::assertSame([
-			'core.user_setup' => 'load_language_on_setup',
 			'core.text_formatter_s9e_configure_after' => [['configure_iframe_embeds', -10]],
 			'core.text_formatter_s9e_renderer_setup' => 'configure_iframe_renderer',
 			'core.page_header_after' => 'inject_frontend',
 		], \phpbb\consentmanager\event\listener::getSubscribedEvents());
-	}
-
-	public function test_load_language_on_setup_registers_common_language_file()
-	{
-		$listener = new \phpbb\consentmanager\event\listener(
-			$this->createMock('\phpbb\controller\helper'),
-			$this->language,
-			$this->createMock('\phpbb\consentmanager\service\consent_manager_interface'),
-			$this->createMock('\phpbb\template\template'),
-			$this->createMock('\phpbb\consentmanager\service\media_manager')
-		);
-
-		$event = new \phpbb\event\data([
-			'lang_set_ext' => [['ext_name' => 'phpbb/example', 'lang_set' => 'common']],
-		]);
-
-		$listener->load_language_on_setup($event);
-
-		self::assertSame([
-			['ext_name' => 'phpbb/example', 'lang_set' => 'common'],
-			['ext_name' => 'phpbb/consentmanager', 'lang_set' => 'common'],
-		], $event['lang_set_ext']);
 	}
 
 	public function test_configure_iframe_embeds_delegates_to_media_manager()
