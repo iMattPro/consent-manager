@@ -74,6 +74,9 @@ class consent_manager implements consent_manager_interface
 	/** @var array|null */
 	protected $category_config;
 
+	/** @var array */
+	protected $local_asset_sources = [];
+
 	/**
 	 * Constructor.
 	 *
@@ -966,17 +969,15 @@ class consent_manager implements consent_manager_interface
 	 */
 	protected function resolve_local_asset_source($asset_path)
 	{
-		$cache_key = $this->get_asset_source_cache_key($asset_path);
-		$cached_src = $this->consent_cache->get_asset_source($cache_key);
-		if ($cached_src !== null)
+		if (array_key_exists($asset_path, $this->local_asset_sources))
 		{
-			return $cached_src;
+			return $this->local_asset_sources[$asset_path];
 		}
 
 		$template_asset = new asset($asset_path, $this->path_helper, $this->filesystem);
 		if (!$this->is_valid_local_asset_path($asset_path) || !$template_asset->is_relative())
 		{
-			return '';
+			return $this->local_asset_sources[$asset_path] = '';
 		}
 
 		if (strpos($asset_path, './') !== 0)
@@ -991,7 +992,7 @@ class consent_manager implements consent_manager_interface
 				}
 				catch (LoaderError $error)
 				{
-					return '';
+					return $this->local_asset_sources[$asset_path] = '';
 				}
 			}
 		}
@@ -1001,10 +1002,7 @@ class consent_manager implements consent_manager_interface
 			$template_asset->add_assets_version($this->config['assets_version']);
 		}
 
-		return $this->consent_cache->put_asset_source(
-			$cache_key,
-			html_entity_decode($template_asset->get_url(), ENT_QUOTES, 'UTF-8')
-		);
+		return $this->local_asset_sources[$asset_path] = html_entity_decode($template_asset->get_url(), ENT_QUOTES, 'UTF-8');
 	}
 
 	/**
@@ -1040,22 +1038,6 @@ class consent_manager implements consent_manager_interface
 	protected function is_valid_identifier($identifier)
 	{
 		return $identifier !== '' && preg_match('/^[A-Za-z0-9][A-Za-z0-9._:-]*$/', $identifier);
-	}
-
-	/**
-	 * Build the persistent cache key used for a resolved asset source.
-	 *
-	 * @param string $asset_path Local asset path
-	 *
-	 * @return string
-	 */
-	protected function get_asset_source_cache_key($asset_path)
-	{
-		return hash('sha256', implode('|', [
-			$asset_path,
-			(string) $this->config['assets_version'],
-			implode(',', $this->twig_environment->getNamespaceLookUpOrder()),
-		]));
 	}
 
 	/**
