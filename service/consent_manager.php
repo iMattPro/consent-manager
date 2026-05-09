@@ -295,7 +295,6 @@ class consent_manager implements consent_manager_interface
 			'storageKey' => $this->get_storage_key(),
 			'cookieName' => $this->get_cookie_name(),
 			'version' => $this->get_version(),
-			'mediaPlaceholderLabel' => $this->language->lang('CONSENTMANAGER_MEDIA_PLACEHOLDER'),
 			'requiredCategories' => $this->get_required_category_ids($categories),
 			'enabledCategories' => $this->get_enabled_category_ids($categories),
 			'optionalCategories' => $this->get_optional_category_ids($categories),

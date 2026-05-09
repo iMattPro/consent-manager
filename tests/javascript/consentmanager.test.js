@@ -14,7 +14,6 @@ function createPayload(overrides) {
 		cookieName: 'phpbb_consent_state',
 		logEndpoint: '/app.php/consent/log',
 		logHash: 'test-hash',
-		mediaPlaceholderLabel: 'This content is blocked until you allow embedded media in the Privacy Settings.',
 		categories: [
 			{ id: 'necessary', enabled: true, required: true },
 			{ id: 'analytics', enabled: true, required: false },
@@ -25,6 +24,12 @@ function createPayload(overrides) {
 		enabledCategories: ['necessary', 'analytics', 'marketing', 'media'],
 		optionalCategories: ['analytics', 'marketing', 'media'],
 		scripts: []
+	}, overrides || {});
+}
+
+function createLang(overrides) {
+	return Object.assign({
+		mediaPlaceholderLabel: 'This content is blocked until you allow embedded media in the Privacy Settings.'
 	}, overrides || {});
 }
 
@@ -138,6 +143,7 @@ function setupConsentManager(options) {
 	}
 
 	window.phpbbConsentManagerPayload = payload;
+	window.phpbbConsentManagerLang = createLang(settings.lang);
 	window.eval(scriptSource);
 
 	if (settings.readyState === 'loading') {

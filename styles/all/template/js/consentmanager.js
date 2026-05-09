@@ -2,6 +2,7 @@
 	'use strict';
 
 	const payload = window.phpbbConsentManagerPayload || null;
+	const lang = window.phpbbConsentManagerLang || {};
 	const existingApi = window.consentManager || {};
 	const queued = existingApi._queue ? existingApi._queue.slice(0) : [];
 	const listeners = [];
@@ -28,7 +29,7 @@
 		return;
 	}
 
-	const mediaPlaceholderLabel = typeof payload.mediaPlaceholderLabel === 'string' ? payload.mediaPlaceholderLabel : '';
+	const mediaPlaceholderLabel = typeof lang.mediaPlaceholderLabel === 'string' ? lang.mediaPlaceholderLabel : '';
 
 	function isArray(value)
 	{

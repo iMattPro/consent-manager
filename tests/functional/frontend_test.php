@@ -39,7 +39,7 @@ class frontend_test extends \phpbb_functional_test_case
 		$this->assertStringContainsString('Privacy settings', $crawler->filter('#consent-manager-link')->text());
 		$this->assertSame(1, $payload['version']);
 		$this->assertSame('phpbb_consent_manager', $payload['storageKey']);
-		$this->assertSame($this->lang('CONSENTMANAGER_MEDIA_PLACEHOLDER'), $payload['mediaPlaceholderLabel']);
+		$this->assertSame($this->lang('CONSENTMANAGER_MEDIA_PLACEHOLDER'), $this->extract_media_placeholder_label($content));
 		$this->assertSame(array('necessary'), $payload['requiredCategories']);
 		$this->assertContains('analytics', $payload['optionalCategories']);
 		$this->assertContains('media', $payload['optionalCategories']);
@@ -161,6 +161,14 @@ class frontend_test extends \phpbb_functional_test_case
 		$this->assertNotEmpty($matches[1]);
 
 		return json_decode($matches[1], true);
+	}
+
+	protected function extract_media_placeholder_label($content)
+	{
+		preg_match("/mediaPlaceholderLabel:\\s+'((?:\\\\.|[^'])*)'/", $content, $matches);
+		$this->assertNotEmpty($matches[1]);
+
+		return json_decode('"' . $matches[1] . '"');
 	}
 
 	protected function reset_consent_manager_state()
