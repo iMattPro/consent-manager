@@ -53,16 +53,16 @@ class acp_manager
 	/**
 	 * Constructor.
 	 *
-	 * @param config           $config Config service
-	 * @param driver_interface         $db Database connection
-	 * @param db_text                  $config_text Text config service
-	 * @param language                 $language Language service
-	 * @param phpbb_log                $log phpBB log service
+	 * @param config                    $config Config service
+	 * @param driver_interface          $db Database connection
+	 * @param db_text                   $config_text Text config service
+	 * @param language                  $language Language service
+	 * @param phpbb_log                 $log phpBB log service
 	 * @param consent_manager_interface $consent_manager Consent manager service
 	 * @param consent_cache             $consent_cache Persistent cache helper
 	 * @param cache_interface           $text_formatter_cache Text formatter cache service
-	 * @param user                     $user Current user
-	 * @param string                   $consent_logs_table Consent log table name
+	 * @param user                      $user Current user
+	 * @param string                    $consent_logs_table Consent log table name
 	 */
 	public function __construct(config $config, driver_interface $db, db_text $config_text, language $language, phpbb_log $log, consent_manager_interface $consent_manager, consent_cache $consent_cache, cache_interface $text_formatter_cache, user $user, $consent_logs_table)
 	{
