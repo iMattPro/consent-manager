@@ -234,7 +234,7 @@ class acp_controller
 		}
 
 		header('Content-Type: text/csv; charset=UTF-8');
-		header('Content-Disposition: attachment; filename="consent_logs.csv"');
+		header('Content-Disposition: attachment; filename="consent_logs_' . gmdate('Y-m-d_His') . '.csv"');
 		header('Cache-Control: no-cache, no-store, must-revalidate');
 		header('Pragma: no-cache');
 		header('Expires: 0');
