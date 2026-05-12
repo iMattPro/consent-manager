@@ -15,6 +15,9 @@ class acp_manager_test extends \phpbb_database_test_case
 	/** @var \phpbb\language\language */
 	protected $language;
 
+	/** @var \phpbb\db\driver\driver_interface */
+	protected $db;
+
 	public static function setup_extensions()
 	{
 		return array('phpbb/consentmanager');
@@ -24,17 +27,16 @@ class acp_manager_test extends \phpbb_database_test_case
 	{
 		parent::setUp();
 
-		global $phpbb_root_path, $phpEx;
+		global $db, $phpbb_root_path, $phpEx;
 
 		$lang_loader = new \phpbb\language\language_file_loader($phpbb_root_path, $phpEx);
 		$this->language = new \phpbb\language\language($lang_loader);
 		$this->language->add_lang('common', 'phpbb/consentmanager');
 		$this->language->add_lang('acp_consentmanager', 'phpbb/consentmanager');
 
-		$db = $this->new_dbal();
-		$db->sql_query('DELETE FROM phpbb_consentmanager_logs');
-		$db->sql_query("DELETE FROM phpbb_users WHERE user_id IN (4242, 4243)");
-		$db->sql_close();
+		$db = $this->db = $this->new_dbal();
+		$this->db->sql_query('DELETE FROM phpbb_consentmanager_logs');
+		$this->db->sql_query("DELETE FROM phpbb_users WHERE user_id IN (4242, 4243)");
 	}
 
 	public function getDataSet()
@@ -120,9 +122,7 @@ class acp_manager_test extends \phpbb_database_test_case
 
 	public function test_get_user_id_by_username_returns_matching_user_id()
 	{
-		$db = $this->new_dbal();
-		$db->sql_query("INSERT INTO phpbb_users (user_id, user_type, group_id, username, username_clean, user_regdate, user_password, user_email, user_lang, user_style, user_rank, user_colour, user_posts, user_permissions, user_ip, user_birthday, user_lastpage, user_last_confirm_key, user_post_sortby_type, user_post_sortby_dir, user_topic_sortby_type, user_topic_sortby_dir, user_avatar, user_sig, user_sig_bbcode_uid, user_jabber, user_actkey, user_actkey_expiration, user_newpasswd, user_allow_massemail) VALUES (4242, " . USER_NORMAL . ", 2, 'LookupUser', 'lookupuser', 0, '', 'lookup@example.com', 'en', 1, 0, '', 0, '', '', '', '', '', 't', 'a', 't', 'd', '', '', '', '', '', 0, '', 0)");
-		$db->sql_close();
+		$this->db->sql_query("INSERT INTO phpbb_users (user_id, user_type, group_id, username, username_clean, user_regdate, user_password, user_email, user_lang, user_style, user_rank, user_colour, user_posts, user_permissions, user_ip, user_birthday, user_lastpage, user_last_confirm_key, user_post_sortby_type, user_post_sortby_dir, user_topic_sortby_type, user_topic_sortby_dir, user_avatar, user_sig, user_sig_bbcode_uid, user_jabber, user_actkey, user_actkey_expiration, user_newpasswd, user_allow_massemail) VALUES (4242, " . USER_NORMAL . ", 2, 'LookupUser', 'lookupuser', 0, '', 'lookup@example.com', 'en', 1, 0, '', 0, '', '', '', '', '', 't', 'a', 't', 'd', '', '', '', '', '', 0, '', 0)");
 
 		$manager = $this->create_manager(1, 'session');
 
@@ -702,8 +702,6 @@ class acp_manager_test extends \phpbb_database_test_case
 			'consentmanager_media_enabled' => 1,
 			'consentmanager_consent_version' => 1,
 		), $config_values));
-		$db = $this->new_dbal();
-
 		if ($log === null)
 		{
 			$log = $this->getMockBuilder('\phpbb\log\log')
@@ -744,7 +742,7 @@ class acp_manager_test extends \phpbb_database_test_case
 
 		return new \phpbb\consentmanager\service\acp_manager(
 			$config,
-			$db,
+			$this->db,
 			$config_text,
 			$this->language,
 			$log,
@@ -811,7 +809,6 @@ JSON;
 		$config = new \phpbb\config\config(array(
 			'rand_seed' => 'random-seed',
 		));
-		$db = $this->new_dbal();
 
 		$user = new \phpbb\user($this->language, '\phpbb\datetime');
 		$user->data = array(
@@ -822,7 +819,7 @@ JSON;
 
 		return new \phpbb\consentmanager\service\log_manager(
 			$config,
-			$db,
+			$this->db,
 			$user,
 			'phpbb_consentmanager_logs'
 		);
