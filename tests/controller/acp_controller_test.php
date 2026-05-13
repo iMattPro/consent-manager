@@ -96,12 +96,14 @@ class acp_controller_test extends \phpbb_test_case
 			->method('get_settings_template_data')
 			->willReturn([
 				'S_CONSENTMANAGER_ANALYTICS' => true,
+				'CONSENTMANAGER_INTEGRATIONS_EXAMPLE' => '[{}]',
 				'CONSENTMANAGER_VERSION' => 1,
 			]);
 		$this->template->expects(self::once())
 			->method('assign_vars')
 			->with([
 				'S_CONSENTMANAGER_ANALYTICS' => true,
+				'CONSENTMANAGER_INTEGRATIONS_EXAMPLE' => '[{}]',
 				'CONSENTMANAGER_VERSION' => 1,
 				'S_ERROR' => false,
 				'ERROR_MSG' => '',
