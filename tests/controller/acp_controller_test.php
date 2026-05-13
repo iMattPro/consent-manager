@@ -243,9 +243,8 @@ class acp_controller_test extends \phpbb_test_case
 
 		$this->acp_manager->expects(self::never())->method('delete_logs');
 		$this->acp_manager->expects(self::never())->method('log_admin_action');
-		$this->acp_manager->expects(self::once())->method('get_user_id_by_username')->with('Alice')->willReturn(42);
-		$this->acp_manager->method('parse_date_filter')
-			->willReturnOnConsecutiveCalls(1704067200, 1735689599);
+		$this->acp_manager->expects(self::never())->method('get_user_id_by_username');
+		$this->acp_manager->expects(self::never())->method('parse_date_filter');
 		$this->template->expects(self::never())->method('assign_vars');
 		$this->setExpectedTriggerError(E_USER_WARNING, $this->language->lang('FORM_INVALID'));
 
@@ -507,9 +506,8 @@ class acp_controller_test extends \phpbb_test_case
 
 		$this->acp_manager->expects(self::never())->method('delete_logs');
 		$this->acp_manager->expects(self::never())->method('log_admin_action');
-		$this->acp_manager->expects(self::once())->method('get_user_id_by_username')->with('Alice')->willReturn(42);
-		$this->acp_manager->method('parse_date_filter')
-			->willReturnOnConsecutiveCalls(1704067200, 1735689599);
+		$this->acp_manager->expects(self::never())->method('get_user_id_by_username');
+		$this->acp_manager->expects(self::never())->method('parse_date_filter');
 		$this->setExpectedTriggerError(E_USER_WARNING, $this->language->lang('FORM_INVALID'));
 
 		$request = $this->create_request_mock([
@@ -538,7 +536,7 @@ class acp_controller_test extends \phpbb_test_case
 		$this->acp_manager->method('parse_date_filter')
 			->willReturn(false);
 
-		$args = [self::callback(function ($vars) {
+		$args = [self::callback(static function ($vars) {
 			return $vars['S_ERROR'] === true
 				&& strpos($vars['ERROR_MSG'], 'MissingUser') !== false
 				&& $vars['EXPORT_USERNAME'] === 'MissingUser'
