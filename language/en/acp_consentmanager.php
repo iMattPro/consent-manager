@@ -40,6 +40,7 @@ $lang = array_merge($lang, [
 	'ACP_CONSENTMANAGER_REPROMPT_SUCCESS'			=> 'Consent version increased. Visitors will be asked to review their settings again.',
 	'ACP_CONSENTMANAGER_INVALID_INTEGRATIONS'		=> 'The integrations field must contain a valid JSON array.',
 	'ACP_CONSENTMANAGER_INVALID_INTEGRATION_ENTRY'	=> 'Integration entry %1$s is invalid. Each entry must include a safe id, supported category, and valid script source URL.',
+	'ACP_CONSENTMANAGER_INVALID_JSON'				=> 'Invalid JSON',
 	'CONSENTMANAGER_CATEGORY_NECESSARY'				=> 'Necessary',
 	'CONSENTMANAGER_CATEGORY_ANALYTICS'				=> 'Analytics',
 	'CONSENTMANAGER_CATEGORY_MARKETING'				=> 'Marketing',
