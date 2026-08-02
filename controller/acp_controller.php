@@ -300,7 +300,8 @@ class acp_controller
 
 		$this->create_csv_response($filters)->send();
 
-		exit;
+		garbage_collection();
+		exit_handler();
 	}
 
 	protected function create_csv_response(array $filters)
