@@ -108,7 +108,7 @@ function setupConsentManager(options) {
 	});
 	const dom = new JSDOM(createMarkup(settings.extraMarkup), {
 		runScripts: 'dangerously',
-		url: 'https://example.com/',
+		url: settings.url || 'https://example.com/',
 		virtualConsole
 	});
 	const { window } = dom;
@@ -272,6 +272,22 @@ test('accept-all persists consent, logs the decision, and updates the UI state',
 		version: payload.version,
 		categories: [ 'necessary', 'analytics', 'marketing', 'media' ]
 	});
+});
+
+test('marks the consent cookie secure only on HTTPS', () => {
+	const https = setupConsentManager();
+	click(https.window, '[data-consent-action="accept-all"]');
+	const httpsCookie = https.dom.cookieJar.getCookiesSync('https://example.com/')
+		.find((cookie) => cookie.key === https.payload.cookieName);
+
+	expect(httpsCookie.secure).toBe(true);
+
+	const http = setupConsentManager({ url: 'http://example.com/' });
+	click(http.window, '[data-consent-action="accept-all"]');
+	const httpCookie = http.dom.cookieJar.getCookiesSync('http://example.com/')
+		.find((cookie) => cookie.key === http.payload.cookieName);
+
+	expect(httpCookie.secure).toBe(false);
 });
 
 test('updates Google consent mode before activating newly consented marketing scripts', () => {

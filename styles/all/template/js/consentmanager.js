@@ -102,6 +102,11 @@
 	{
 		let cookie = name + '=' + encodeURIComponent(value) + '; path=/; SameSite=Lax';
 
+		if (window.location.protocol === 'https:')
+		{
+			cookie += '; Secure';
+		}
+
 		if (typeof maxAge === 'number')
 		{
 			cookie += '; max-age=' + maxAge;
