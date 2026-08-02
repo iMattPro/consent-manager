@@ -175,7 +175,9 @@ function setupConsentManager(options) {
 		window.document.cookie = payload.cookieName + '=' + encodeURIComponent(JSON.stringify(settings.cookieState));
 	}
 
-	window.phpbbConsentManagerPayload = payload;
+	if (!settings.withoutPayload) {
+		window.phpbbConsentManagerPayload = payload;
+	}
 	window.phpbbConsentManagerLang = createLang(settings.lang);
 	window.eval(scriptSource);
 
@@ -196,6 +198,15 @@ function setupConsentManager(options) {
 
 afterEach(() => {
 	jest.restoreAllMocks();
+});
+
+test('exits cleanly when payload is missing', () => {
+	const { window, jsdomErrors } = setupConsentManager({
+		withoutPayload: true
+	});
+
+	expect(window.consentManager).toBeUndefined();
+	expect(jsdomErrors).toEqual([]);
 });
 
 test('prefers the newest stored state and synchronizes cookie and local storage', () => {
