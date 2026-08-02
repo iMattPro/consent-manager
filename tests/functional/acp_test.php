@@ -34,6 +34,30 @@ class acp_test extends functional_base
 		$this->assertContainsLang('ACP_CONSENTMANAGER_VERSION', $crawler->filter('#main')->text());
 	}
 
+	public function test_acp_page_escapes_integration_label()
+	{
+		$label = '<script>alert(1)</script>';
+		$integrations = json_encode(array(array(
+			'id' => 'board.analytics',
+			'category' => 'analytics',
+			'label' => $label,
+			'src' => '/analytics.js',
+		)));
+
+		$this->db->sql_query('UPDATE ' . CONFIG_TEXT_TABLE . "
+			SET config_value = '" . $this->db->sql_escape($integrations) . "'
+			WHERE config_name = 'consentmanager_integrations'");
+		$this->purge_cache();
+
+		$this->login();
+		$this->admin_login();
+		self::request('GET', $this->get_module_url());
+		$content = self::get_content();
+
+		$this->assertStringNotContainsString($label, $content);
+		$this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $content);
+	}
+
 	public function test_acp_form_saves_settings_and_integrations()
 	{
 		$this->login();
