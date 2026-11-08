@@ -643,14 +643,8 @@
 		if (script.src)
 		{
 			element.src = script.src;
-			if (script.async)
-			{
-				element.async = true;
-			}
-			if (script.defer)
-			{
-				element.defer = true;
-			}
+			element.async = !!script.async;
+			element.defer = !!script.defer;
 		}
 		else if (script.inline)
 		{
@@ -768,14 +762,8 @@
 			if (sourceUrl)
 			{
 				liveScript.src = sourceUrl;
-				if (source.hasAttribute('async'))
-				{
-					liveScript.async = true;
-				}
-				if (source.hasAttribute('defer'))
-				{
-					liveScript.defer = true;
-				}
+				liveScript.async = source.hasAttribute('async');
+				liveScript.defer = source.hasAttribute('defer');
 			}
 			else
 			{

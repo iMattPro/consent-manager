@@ -411,7 +411,20 @@ test('registerScript blocks unsafe sources and executes safe inline scripts', ()
 		category: 'analytics',
 		src: '/assets/analytics.js'
 	})).toBe(true);
-	expect(document.head.querySelector('script[src="/assets/analytics.js"]')).not.toBeNull();
+	const orderedScript = document.head.querySelector('script[src="/assets/analytics.js"]');
+	expect(orderedScript).not.toBeNull();
+	expect(orderedScript.async).toBe(false);
+	expect(orderedScript.defer).toBe(false);
+
+	expect(window.consentManager.registerScript('async-deferred', {
+		category: 'analytics',
+		src: '/assets/async-deferred.js',
+		async: true,
+		defer: true
+	})).toBe(true);
+	const asyncDeferredScript = document.head.querySelector('script[src="/assets/async-deferred.js"]');
+	expect(asyncDeferredScript.async).toBe(true);
+	expect(asyncDeferredScript.defer).toBe(true);
 });
 
 test('processes deferred consent scripts and copies only safe attributes', () => {
@@ -424,6 +437,18 @@ test('processes deferred consent scripts and copies only safe attributes', () =>
 				data-extra="allowed"
 				onclick="window.shouldNotRun = true;"
 			>window.deferredLoaded = true;</script>
+			<script
+				type="text/plain"
+				data-consent-category="analytics"
+				src="/assets/ordered-deferred.js"
+			></script>
+			<script
+				type="text/plain"
+				data-consent-category="analytics"
+				src="/assets/async-deferred.js"
+				async
+				defer
+			></script>
 		`
 	});
 
@@ -435,6 +460,13 @@ test('processes deferred consent scripts and copies only safe attributes', () =>
 	expect(liveScript.getAttribute('data-extra')).toBe('allowed');
 	expect(liveScript.hasAttribute('onclick')).toBe(false);
 	expect(window.deferredLoaded).toBe(true);
+
+	const orderedSource = document.querySelector('script[src="/assets/ordered-deferred.js"]');
+	expect(orderedSource.nextSibling.async).toBe(false);
+	expect(orderedSource.nextSibling.defer).toBe(false);
+	const asyncDeferredSource = document.querySelector('script[src="/assets/async-deferred.js"]');
+	expect(asyncDeferredSource.nextSibling.async).toBe(true);
+	expect(asyncDeferredSource.nextSibling.defer).toBe(true);
 });
 
 test('activates deferred media embeds after media consent is granted', () => {
