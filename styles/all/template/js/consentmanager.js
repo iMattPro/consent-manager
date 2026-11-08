@@ -490,7 +490,8 @@
 		{
 			try
 			{
-				if (window.navigator.sendBeacon(payload.logEndpoint, body))
+				const beaconBody = new Blob([ body ], { type: 'application/json' });
+				if (window.navigator.sendBeacon(payload.logEndpoint, beaconBody))
 				{
 					onComplete();
 					return;

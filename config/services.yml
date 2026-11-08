@@ -30,6 +30,7 @@ services:
             - '@path_helper'
             - '@filesystem'
             - '@request'
+            - '@user'
 
     phpbb.consentmanager.log_manager:
         class: phpbb\consentmanager\service\log_manager

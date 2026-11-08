@@ -147,13 +147,20 @@ function setupConsentManager(options) {
 			}
 		}
 	};
+	window.Blob = class FakeBlob {
+		constructor(parts, options) {
+			this.body = parts.join('');
+			this.type = options.type;
+		}
+	};
 
 	window.navigator.sendBeacon = function(url, body) {
 		requests.push({
 			transport: 'beacon',
 			method: 'POST',
 			url,
-			body
+			body: body.body,
+			contentType: body.type
 		});
 
 		return true;
@@ -367,6 +374,7 @@ test('reject-all logs the updated decision before reloading when consent is revo
 	expect(requests).toHaveLength(1);
 	expect(requests[0].transport).toBe('beacon');
 	expect(requests[0].url).toBe(payload.logEndpoint);
+	expect(requests[0].contentType).toBe('application/json');
 	expect(JSON.parse(requests[0].body)).toEqual({
 		hash: payload.logHash,
 		version: payload.version,
@@ -599,6 +607,7 @@ test('revoking only media consent reloads the page', () => {
 	expect(requests).toHaveLength(1);
 	expect(requests[0].transport).toBe('beacon');
 	expect(requests[0].url).toBe(payload.logEndpoint);
+	expect(requests[0].contentType).toBe('application/json');
 	expect(JSON.parse(requests[0].body)).toEqual({
 		hash: payload.logHash,
 		version: payload.version,
