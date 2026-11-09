@@ -185,8 +185,7 @@ function setupConsentManager(options) {
 
 	if (settings.cookieState) {
 		window.document.cookie = payload.cookieName + '=' + encodeURIComponent(JSON.stringify(settings.cookieState));
-	}
-	else if (settings.rawCookieValue) {
+	} else if (settings.rawCookieValue) {
 		window.document.cookie = payload.cookieName + '=' + settings.rawCookieValue;
 	}
 
