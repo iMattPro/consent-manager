@@ -186,6 +186,9 @@ function setupConsentManager(options) {
 	if (settings.cookieState) {
 		window.document.cookie = payload.cookieName + '=' + encodeURIComponent(JSON.stringify(settings.cookieState));
 	}
+	else if (settings.rawCookieValue) {
+		window.document.cookie = payload.cookieName + '=' + settings.rawCookieValue;
+	}
 
 	if (settings.withJquery) {
 		window.jQuery = function() {
@@ -262,6 +265,29 @@ test('prefers the newest stored state and synchronizes cookie and local storage'
 	expect(window.consentManager.getState()).toEqual(cookieState);
 	expect(JSON.parse(window.localStorage.getItem(payload.storageKey))).toEqual(cookieState);
 	expect(JSON.parse(getCookieValue(document, payload.cookieName))).toEqual(cookieState);
+});
+
+test('repairs malformed cookie encoding from valid local storage', () => {
+	const localState = createState([ 'necessary', 'analytics' ], '2026-04-28T00:00:00.000Z');
+	const { window, document, payload, jsdomErrors } = setupConsentManager({
+		localState,
+		rawCookieValue: '%E0%A4%A'
+	});
+
+	expect(window.consentManager.getState()).toEqual(localState);
+	expect(JSON.parse(getCookieValue(document, payload.cookieName))).toEqual(localState);
+	expect(jsdomErrors).toHaveLength(0);
+});
+
+test('clears malformed cookie encoding and initializes without stored state', () => {
+	const { window, document, payload, jsdomErrors } = setupConsentManager({
+		rawCookieValue: '%E0%A4%A'
+	});
+
+	expect(window.consentManager.getState()).toBeNull();
+	expect(getCookieValue(document, payload.cookieName)).toBe('');
+	expect(document.getElementById('consent-manager-banner').hidden).toBe(false);
+	expect(jsdomErrors).toHaveLength(0);
 });
 
 test('replays queued API calls and executes consented registered scripts', () => {

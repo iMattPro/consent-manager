@@ -40,7 +40,14 @@
 			{
 				if (parts[i].indexOf(name + '=') === 0)
 				{
-					return decodeURIComponent(parts[i].substring(name.length + 1));
+					try
+					{
+						return decodeURIComponent(parts[i].substring(name.length + 1));
+					}
+					catch (error)
+					{
+						return '';
+					}
 				}
 			}
 

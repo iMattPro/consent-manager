@@ -133,7 +133,14 @@
 		{
 			if (cookies[index].indexOf(name + '=') === 0)
 			{
-				return decodeURIComponent(cookies[index].substring(name.length + 1));
+				try
+				{
+					return decodeURIComponent(cookies[index].substring(name.length + 1));
+				}
+				catch (error)
+				{
+					return '';
+				}
 			}
 		}
 
