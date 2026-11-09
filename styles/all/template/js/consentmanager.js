@@ -6,9 +6,9 @@
 	const existingApi = window.consentManager || {};
 	const queued = existingApi._queue ? existingApi._queue.slice(0) : [];
 	const listeners = [];
-	const registry = {};
-	const executedScripts = {};
-	const executedCategories = {};
+	const registry = Object.create(null);
+	const executedScripts = Object.create(null);
+	const executedCategories = Object.create(null);
 	let root = null;
 	let state = null;
 	let isRendered = false;
@@ -16,7 +16,7 @@
 	let pendingOpenSettings = false;
 	let keydownBound = false;
 	let lastFocusedElement = null;
-	const categoriesById = {};
+	const categoriesById = Object.create(null);
 	const deferredSelector = 'script[type="text/plain"][data-consent-category]';
 	const deferredEmbedSelector = '[data-consent-media-container][data-consent-category]';
 	let requiredCategories = [];
@@ -36,6 +36,11 @@
 	function isArray(value)
 	{
 		return Object.prototype.toString.call(value) === '[object Array]';
+	}
+
+	function hasOwn(object, property)
+	{
+		return Object.prototype.hasOwnProperty.call(object, property);
 	}
 
 	for (let i = 0; i < payload.categories.length; i++)
@@ -193,7 +198,7 @@
 		for (let index = 0; index < categories.length; index++)
 		{
 			const categoryId = String(categories[index]);
-			if (requiredCategories.indexOf(categoryId) === -1 && enabledCategories.indexOf(categoryId) !== -1 && categoriesById[categoryId])
+			if (requiredCategories.indexOf(categoryId) === -1 && enabledCategories.indexOf(categoryId) !== -1 && hasOwn(categoriesById, categoryId))
 			{
 				normalized.push(categoryId);
 			}
@@ -376,7 +381,7 @@
 
 	function buildGoogleConsentModeState()
 	{
-		const consentState = {};
+		const consentState = Object.create(null);
 
 		if (!googleConsentMode.enabled)
 		{
@@ -385,7 +390,7 @@
 
 		for (const consentType in googleConsentTypes)
 		{
-			if (Object.prototype.hasOwnProperty.call(googleConsentTypes, consentType))
+			if (hasOwn(googleConsentTypes, consentType))
 			{
 				consentState[consentType] = hasConsent(googleConsentTypes[consentType]) ? 'granted' : 'denied';
 			}
@@ -405,7 +410,7 @@
 
 		for (const consentType in consentState)
 		{
-			if (Object.prototype.hasOwnProperty.call(consentState, consentType))
+			if (hasOwn(consentState, consentType))
 			{
 				window.gtag('consent', 'update', consentState);
 				return;
@@ -437,7 +442,7 @@
 
 		for (const scriptId in executedScripts)
 		{
-			if (executedScripts.hasOwnProperty(scriptId) && removedCategories.indexOf(executedScripts[scriptId]) !== -1)
+			if (hasOwn(executedScripts, scriptId) && removedCategories.indexOf(executedScripts[scriptId]) !== -1)
 			{
 				return true;
 			}
@@ -452,7 +457,7 @@
 				return true;
 			}
 
-			if (executedCategories[removedCategories[index]])
+			if (hasOwn(executedCategories, removedCategories[index]))
 			{
 				return true;
 			}
@@ -620,7 +625,7 @@
 	{
 		for (const name in attributes)
 		{
-			if (attributes.hasOwnProperty(name) && isSafeAttributeName(name))
+			if (hasOwn(attributes, name) && isSafeAttributeName(name))
 			{
 				element.setAttribute(name, attributes[name]);
 			}
@@ -629,7 +634,7 @@
 
 	function executeScript(script)
 	{
-		if (!script || !script.id || executedScripts[script.id] || !hasConsent(script.category))
+		if (!script || !script.id || hasOwn(executedScripts, script.id) || !hasConsent(script.category))
 		{
 			return false;
 		}
@@ -696,7 +701,7 @@
 	{
 		for (const scriptId in registry)
 		{
-			if (registry.hasOwnProperty(scriptId))
+			if (hasOwn(registry, scriptId))
 			{
 				executeScript(registry[scriptId]);
 			}
