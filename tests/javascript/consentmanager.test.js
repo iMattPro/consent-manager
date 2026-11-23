@@ -144,28 +144,16 @@ function setupConsentManager(options) {
 			this.body = body;
 			requests.push(this);
 
-			if (typeof this.onloadend === 'function') {
-				this.onloadend();
+			if (!settings.deferLogResponse) {
+				this.respond(200);
 			}
 		}
-	};
-	window.Blob = class FakeBlob {
-		constructor(parts, options) {
-			this.body = parts.join('');
-			this.type = options.type;
+
+		respond(status, body) {
+			this.status = status;
+			this.responseText = body || '';
+			this.onloadend();
 		}
-	};
-
-	window.navigator.sendBeacon = function(url, body) {
-		requests.push({
-			transport: 'beacon',
-			method: 'POST',
-			url,
-			body: body.body,
-			contentType: body.type
-		});
-
-		return true;
 	};
 
 	if (settings.queue) {
@@ -415,6 +403,49 @@ test('marks the consent cookie secure only on HTTPS', () => {
 	expect(httpCookie.secure).toBe(false);
 });
 
+test.each([
+	[ 'accept-all', null ],
+	[ 'reject-all', createState([ 'necessary', 'media' ], '2026-04-28T00:00:00.000Z') ]
+])('a stale token on %s clears the saved choice and reloads once', (action, localState) => {
+	const { window, document, payload, requests, jsdomErrors } = setupConsentManager({
+		localState,
+		deferLogResponse: true
+	});
+
+	click(window, '[data-consent-action="' + action + '"]');
+	expect(jsdomErrors).toHaveLength(0);
+	expect(requests[0].timeout).toBe(localState ? 1000 : 0);
+	requests[0].respond(403, '{"error":"invalid_hash"}');
+
+	expect(window.localStorage.getItem(payload.storageKey)).toBeNull();
+	expect(getCookieValue(document, payload.cookieName)).toBe('');
+	expect(jsdomErrors).toHaveLength(1);
+	expect(jsdomErrors[0].message).toContain('Not implemented: navigation');
+});
+
+test('an unrelated forbidden response keeps the saved choice', () => {
+	const { window, payload, requests, jsdomErrors } = setupConsentManager({ deferLogResponse: true });
+
+	click(window, '[data-consent-action="accept-all"]');
+	requests[0].respond(403, '{"error":"access_denied"}');
+
+	expect(JSON.parse(window.localStorage.getItem(payload.storageKey))).toEqual(window.consentManager.getState());
+	expect(jsdomErrors).toHaveLength(0);
+});
+
+test('a stale response leaves a newer choice saved by another tab', () => {
+	const { window, document, payload, requests } = setupConsentManager({ deferLogResponse: true });
+	click(window, '[data-consent-action="accept-all"]');
+
+	const newerChoice = JSON.stringify(createState([ 'necessary' ], new Date().toISOString()));
+	window.localStorage.setItem(payload.storageKey, newerChoice);
+	document.cookie = payload.cookieName + '=' + encodeURIComponent(newerChoice);
+	requests[0].respond(403, '{"error":"invalid_hash"}');
+
+	expect(window.localStorage.getItem(payload.storageKey)).toBe(newerChoice);
+	expect(getCookieValue(document, payload.cookieName)).toBe(newerChoice);
+});
+
 test('updates Google consent mode before activating newly consented marketing scripts', () => {
 	const { window, document, gtagCalls } = setupConsentManager({
 		withGtag: true,
@@ -459,9 +490,9 @@ test('reject-all logs the updated decision before reloading when consent is revo
 	click(window, '[data-consent-action="reject-all"]');
 
 	expect(requests).toHaveLength(1);
-	expect(requests[0].transport).toBe('beacon');
+	expect(requests[0].method).toBe('POST');
 	expect(requests[0].url).toBe(payload.logEndpoint);
-	expect(requests[0].contentType).toBe('application/json');
+	expect(requests[0].headers['Content-Type']).toBe('application/json');
 	expect(JSON.parse(requests[0].body)).toEqual({
 		hash: payload.logHash,
 		version: payload.version,
@@ -735,9 +766,9 @@ test('revoking only media consent reloads the page', () => {
 	click(window, '[data-consent-action="save-settings"]');
 
 	expect(requests).toHaveLength(1);
-	expect(requests[0].transport).toBe('beacon');
+	expect(requests[0].method).toBe('POST');
 	expect(requests[0].url).toBe(payload.logEndpoint);
-	expect(requests[0].contentType).toBe('application/json');
+	expect(requests[0].headers['Content-Type']).toBe('application/json');
 	expect(JSON.parse(requests[0].body)).toEqual({
 		hash: payload.logHash,
 		version: payload.version,
