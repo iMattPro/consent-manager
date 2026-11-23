@@ -690,6 +690,30 @@ test('renders deferred media placeholder link from original posted URL once befo
 	expect(placeholder.querySelector('a').getAttribute('rel')).toBe('noopener noreferrer');
 });
 
+test.each([
+	[ 'some words here', false ],
+	[ 'video-id', false ],
+	[ '/board/embed/123', false ],
+	[ 'https:///missing-host', false ],
+	[ 'https://video.example.com:invalid/watch', false ],
+	[ 'http://video.example.com/watch', true ],
+	[ '//video.example.com/watch', true ]
+])('renders a placeholder link for %s only if it is a web URL', (source, linked) => {
+	const { document } = setupConsentManager({
+		extraMarkup: `
+			<div data-consent-media-container="1" data-consent-category="media">
+				<span data-consent-media-placeholder="1" data-consent-link="${source}"></span>
+			</div>
+		`
+	});
+	const placeholder = document.querySelector('[data-consent-media-placeholder]');
+	const link = placeholder.querySelector('a');
+	const label = createLang().mediaPlaceholderLabel;
+
+	expect(link && link.getAttribute('href')).toBe(linked ? source : null);
+	expect(placeholder.textContent).toBe(linked ? label + ' ' + source : label);
+});
+
 test('activates deferred embeds when the media content element is the iframe itself', () => {
 	const { document } = setupConsentManager({
 		localState: createState([ 'necessary', 'media' ], '2026-04-28T00:00:00.000Z'),
@@ -717,7 +741,7 @@ test('activates deferred embeds when the media content element is the iframe its
 	expect(frame.hasAttribute('data-consent-src')).toBe(false);
 });
 
-test('saving consent activates deferred embeds when the media content element is the iframe itself', () => {
+test('saving consent activates a relative iframe source', () => {
 	const { window, document } = setupConsentManager({
 		extraMarkup: `
 			<span data-consent-media-container="1" data-consent-category="media">
@@ -726,7 +750,7 @@ test('saving consent activates deferred embeds when the media content element is
 					data-consent-media-frame="1"
 					data-consent-media-content="1"
 					hidden="hidden"
-					data-consent-src="https://media.example.com/embed/456"
+					data-consent-src="/board/embed/456"
 				></iframe>
 			</span>
 		`
@@ -747,7 +771,7 @@ test('saving consent activates deferred embeds when the media content element is
 	expect(container.getAttribute('data-consent-processed')).toBe('1');
 	expect(placeholder.hidden).toBe(true);
 	expect(frame.hidden).toBe(false);
-	expect(frame.getAttribute('src')).toBe('https://media.example.com/embed/456');
+	expect(frame.getAttribute('src')).toBe('/board/embed/456');
 	expect(frame.hasAttribute('data-consent-src')).toBe(false);
 });
 

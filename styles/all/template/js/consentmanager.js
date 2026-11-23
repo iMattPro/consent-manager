@@ -623,7 +623,7 @@
 		const source = placeholder.getAttribute('data-consent-link');
 		placeholder.textContent = mediaPlaceholderLabel || '';
 
-		if (!source || !isSafeEmbedSource(source)) {
+		if (!source || !/^(?:https?:)?\/\/[^/\\?#\s]\S*$/i.test(source) || !isSafeEmbedSource(source)) {
 			return;
 		}
 
